@@ -107,8 +107,10 @@ void updateScene(double dt, Scene** cur_scene) {
 
 }
 
+
+
 //Challenge 1 Draw a Triangle
-static std::array<Vertex, 3> triangleArray = {
+static std::vector<Vertex> triangleArray = {
 	Vertex{glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec4(0.9f, 0.8f, 0.2f, 1.0f)},
 	Vertex{glm::vec3(0.0f, 0.5f, 0.0f ), glm::vec4(0.9f, 0.8f, 0.2f, 1.0f)},
 	Vertex{glm::vec3(0.5f, -0.5f, 0.0f ), glm::vec4(0.9f, 0.8f, 0.2f, 1.0f)}
@@ -137,32 +139,24 @@ void createBasicVAO(uint32_t* vao) {
 void createArrayBuffer(uint32_t* vbo, std::vector<Vertex> *mesh) {
 	glGenBuffers(1, vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, (*vbo));
-	glBufferData(GL_ARRAY_BUFFER, sizeof((*mesh)), (*mesh).data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * (*mesh).size(), (*mesh).data(), GL_STATIC_DRAW);
 }
 
-void createElementBuffer(uint32_t* ebo, void *elements) {
-	glCreateBuffers(1, ebo);
+void createElementBuffer(uint32_t* ebo) {
+	glGenBuffers(1, ebo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (*ebo));
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
+}
+
+void setupShape(uint32_t *vao, uint32_t *vbo, uint32_t *ebo, std::vector<Vertex> *mesh) {
+	createBasicVAO(vao);
+	createArrayBuffer(vbo, mesh);
+	glDefineVertex();
+	createElementBuffer(ebo);
 }
 
 void setUpTriangle() {
-	//Create the vao, which contains all info below
-	glCreateVertexArrays(1, &triangleVAO);
-	glBindVertexArray(triangleVAO);
-
-	//Create a buffer that defines the vertices 
-	glCreateBuffers(1, &triangleVBO);
-	glBindBuffer(GL_ARRAY_BUFFER, triangleVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(triangleArray), triangleArray.data(), GL_STATIC_DRAW);
-
-	//Define how each element of the vertice is read in
-	glDefineVertex();
-
-	glCreateBuffers(1, &triangleEBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, triangleEBO);
+	setupShape(&triangleVAO, &triangleVBO, &triangleEBO, &triangleArray);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(triangleElements), triangleElements, GL_STATIC_DRAW);
-
 }
 
 void drawTriangle() {
@@ -188,7 +182,7 @@ static uint32_t challenge2VBO;
 static uint32_t challenge2EBO;
 
 
-static std::array<Vertex, 4> squareArray = {
+static std::vector<Vertex> squareArray = {
 	
 	Vertex{glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec4(0.11f, 0.8f, 0.76f, 1.0f)},
 	Vertex{glm::vec3(-0.5f,  0.5f, 0.0f), glm::vec4(0.1f,  0.9f, 0.12f, 1.0f)},
@@ -202,25 +196,13 @@ static uint32_t challenge2Elements[6] = {
 };
 
 void setupChallenge2() {
-	glCreateVertexArrays(1, &challenge2VAO);
-	glBindVertexArray(challenge2VAO);
-
-	glGenBuffers(1, &challenge2VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, challenge2VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(squareArray), squareArray.data(), GL_STATIC_DRAW);
-
-	glDefineVertex();
-
-	glGenBuffers(1, &challenge2EBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, challenge2EBO);
+	setupShape(&challenge2VAO, &challenge2VBO, &challenge2EBO, &squareArray);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(challenge2Elements), challenge2Elements, GL_STATIC_DRAW);
-
 }
 
 void drawChallenge2() {
 	glBindVertexArray(challenge2VAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
 }
 
 void destroyChallenge2() {
@@ -237,7 +219,7 @@ static uint32_t challenge3Elements[24] = {
 };
 
 
-static std::array<Vertex, 10> challenge3Star = {
+static std::vector<Vertex> challenge3Star = {
 	//      Color                         Position
 	Vertex{glm::vec3(-0.4f,  0.125f, 0.0f)   , glm::vec4(0.4f, 0.521f, 0.960f, 1.0f)},
 	Vertex{glm::vec3(-0.125f,  0.125f, 0.0f) , glm::vec4( 0.490f, 0.443f, 0.956f, 1.0f )},
@@ -256,22 +238,12 @@ static uint32_t challenge3VBO;
 static uint32_t challenge3EBO;
 
 void setupChallenge3() {
-	glGenVertexArrays(1, &challenge3VAO);
-	glBindVertexArray(challenge3VAO);
-
-	glGenBuffers(1, &challenge3VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, challenge3VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(challenge3Star), challenge3Star.data(), GL_STATIC_DRAW);
-
-	glDefineVertex();
-
-	glGenBuffers(1, &challenge3EBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, challenge3EBO);
+	setupShape(&challenge3VAO, &challenge3VBO, &challenge3EBO, &challenge3Star);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(challenge3Elements), challenge3Elements, GL_STATIC_DRAW);
 }
 
 void drawChallenge3() {
-	//glBindVertexArray(challenge3VAO);
+	glBindVertexArray(challenge3VAO);
 	glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
 }
 
@@ -300,17 +272,12 @@ static uint32_t challenge4VBO;
 static uint32_t challenge4EBO;
 
 void setupChallenge4() {
-	createBasicVAO(&challenge4VAO);
-	createArrayBuffer(&challenge4VBO, &challenge4Square);
-	glDefineVertex();
-	glGenBuffers(1, &challenge4EBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, challenge4EBO);
+	setupShape(&challenge4VAO, &challenge4VBO, &challenge4EBO, &challenge4Square);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(challenge4Elements), challenge4Elements, GL_STATIC_DRAW);
-	//createElementBuffer(&challenge4EBO, challenge4Elements);
 }
 
 void drawChallenge4() {
-	//glDrawArrays(GL_LINES, 0, 4);
+	glBindVertexArray(challenge4VAO);
 	glDrawElements(GL_LINES, 8, GL_UNSIGNED_INT, 0);
 }
 
