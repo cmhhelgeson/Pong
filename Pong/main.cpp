@@ -8,6 +8,18 @@ struct Vertex {
 	glm::vec4 color;
 };
 
+struct Camera {
+	glm::mat4x4 projectionMatrix;
+	glm::mat4x4 viewMatrix;
+	glm::vec2 pos;
+};
+
+/* Camera* initCamera() {
+	Camera* cam = new Camera();
+	cam->pos = { 2.0f, 2.0f };
+	cam->viewMatrix = glm::mat
+} */
+
 void glDefineVertex() {
 	//Define how each element of the vertice is read in
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, pos));
@@ -320,9 +332,6 @@ void destroyChallenge() {
 }
 
 
-
-
-
 int main() {
 	if (!glfwInit()) {
 		printf("Failed to initialize GLFW");
@@ -349,7 +358,13 @@ int main() {
 	glfwSetFramebufferSizeCallback(win->window, cmh_resize_callback);
 	//Which pixels to draw to glViewport(lower left corner, width, height)
 	glViewport(0, 0, win->sizeX, win->sizeY);
+	
 	bindShader(shaderId);
+	uint32_t transformLoc = glGetUniformLocation(shaderId, "transform");
+	glm::mat4 trans(1.0f);
+	
+
+
 
 	Scene* curScene = initScene(250.0f / 255.0f, 119.0f/255.0f, 110.0f/255.0f);
 	static double fps = 1.0 / 60.0;
@@ -358,6 +373,9 @@ int main() {
 	double dt = -1.0f;
 
 	currentChallenge = 0;
+
+	float deltaX = 0.5f;
+	float deltaY = 0.1f;
 	
 	int frameCount = 0;
 	while (!glfwWindowShouldClose(win->window)) {
@@ -415,9 +433,20 @@ int main() {
 		if (Key::keyIsPressed[GLFW_KEY_ESCAPE]) {
 			glfwSetWindowShouldClose(win->window, true);
 		}
+		if (Key::keyIsPressed[GLFW_KEY_LEFT]) {
+			deltaX = -0.5f;
+		}
+		if (Key::keyIsPressed[GLFW_KEY_RIGHT]) {
+			deltaX = 0.5f;
+		}
 		glClearColor(curScene->backColor.r, curScene->backColor.g, curScene->backColor.b, 1.0f);
 		//Clear Screen for next draw
 		glClear(GL_COLOR_BUFFER_BIT);
+
+		trans = glm::translate(trans, glm::vec3(deltaX * dt, 0.0f, 0.0f));
+		//trans = glm::rotate(trans, glm::radians(0.1f), glm::vec3(0.0, 0.0, 1.0));
+		deltaX = 0.0f;
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 		switch (currentChallenge) {
 		case 1: {
 			drawTriangle();
