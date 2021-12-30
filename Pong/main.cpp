@@ -1,6 +1,7 @@
 #include "Window.h"
-
+#include "Shader.h"
 #define TAU (M_PI * 2)
+
 
 struct Vertex {
 	glm::vec3 pos;
@@ -318,6 +319,10 @@ void destroyChallenge() {
 	}
 }
 
+
+
+
+
 int main() {
 	if (!glfwInit()) {
 		printf("Failed to initialize GLFW");
@@ -337,11 +342,14 @@ int main() {
 		return -1;
 	}
 
+	uint32_t shaderId = compileShader("default_vert.glsl", "default_frag.glsl");
+
 	glfwSetKeyCallback(win->window, cmh_key_callback);
 	glfwSetMouseButtonCallback(win->window, cmh_mouse_button_callback);
 	glfwSetFramebufferSizeCallback(win->window, cmh_resize_callback);
 	//Which pixels to draw to glViewport(lower left corner, width, height)
 	glViewport(0, 0, win->sizeX, win->sizeY);
+	bindShader(shaderId);
 
 	Scene* curScene = initScene(250.0f / 255.0f, 119.0f/255.0f, 110.0f/255.0f);
 	static double fps = 1.0 / 60.0;
@@ -443,7 +451,7 @@ int main() {
 		
 		endFrameTime = glfwGetTime() , endSecondTime = glfwGetTime();
 		dt = endFrameTime - beginFrameTime;
-		printf("%lf\n", dt);
+		//printf("%lf\n", dt);
 		//printf("%lf\n", dt);
 		frameCount++;
 		if (endSecondTime - beginSecondTime >= 1.0) {
