@@ -1,5 +1,6 @@
 #include "Window.h"
 #include "Shader.h"
+#include "Graphics.h"
 #define TAU (M_PI * 2)
 
 
@@ -14,20 +15,21 @@ struct Camera {
 	glm::vec2 pos;
 };
 
+
 /* Camera* initCamera() {
 	Camera* cam = new Camera();
 	cam->pos = { 2.0f, 2.0f };
 	cam->viewMatrix = glm::mat
 } */
 
-void glDefineVertex() {
+/*void glDefineVertex() {
 	//Define how each element of the vertice is read in
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, pos));
 	glEnableVertexAttribArray(0);
 
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
 	glEnableVertexAttribArray(1);
-}
+} */
 
 enum class ChallengeType {
 	None = 0,
@@ -58,12 +60,18 @@ struct Scene {
 namespace Input {
 	namespace Key {
 		bool keyIsPressed[GLFW_KEY_LAST];
+		std::array<bool, GLFW_KEY_LAST> keyCurState = { 0 };
+		std::array<bool, GLFW_KEY_LAST> keyPrevState = { 0 };
 		bool isKeyDown(int key) {
 			if (key >= 0 && key < GLFW_KEY_LAST) {
 				return keyIsPressed[key];
 			}
 		}
-
+		bool isKeyHeld(int key) {
+			if (key >= 0 && key < GLFW_KEY_LAST) {
+				return (keyCurState[key] == keyPrevState[key] && keyCurState[key] == GLFW_PRESS);
+			}
+		}	
 	}
 	namespace Mouse {
 		bool mouseIsPressed[GLFW_MOUSE_BUTTON_LAST];
@@ -76,8 +84,11 @@ using namespace Input;
 void cmh_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (key >= 0 && key < GLFW_KEY_LAST) {
 		Key::keyIsPressed[key] = action == GLFW_PRESS;
+		std::cout << "Prev State: " << Key::keyPrevState[key] << " Current State: " << Key::keyCurState[key] << '\n'; 
+		if (action != GLFW_REPEAT) {
+			Key::keyCurState[key] = action;
+		} 
 	}
-
 }
 
 void cmh_mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
@@ -374,12 +385,13 @@ int main() {
 
 	currentChallenge = 0;
 
-	float deltaX = 0.5f;
-	float deltaY = 0.1f;
+	float deltaX = 0.0f;
+	float deltaY = 0.0f;
 	
 	int frameCount = 0;
 	while (!glfwWindowShouldClose(win->window)) {
-		//Draw
+		Key::keyPrevState = Key::keyCurState;
+		//Setup Draw
 		if (Key::isKeyDown(GLFW_KEY_1)) {
 			if (currentChallenge != 1) {
 				destroyChallenge();
@@ -433,20 +445,30 @@ int main() {
 		if (Key::keyIsPressed[GLFW_KEY_ESCAPE]) {
 			glfwSetWindowShouldClose(win->window, true);
 		}
-		if (Key::keyIsPressed[GLFW_KEY_LEFT]) {
+		/*if (Key::keyIsPressed[GLFW_KEY_LEFT]) {
 			deltaX = -0.5f;
+		} */
+		if (Key::isKeyHeld(GLFW_KEY_LEFT) ){
+			deltaX -= 0.5f;
 		}
-		if (Key::keyIsPressed[GLFW_KEY_RIGHT]) {
+		if (Key::isKeyHeld(GLFW_KEY_RIGHT) ) {
 			deltaX = 0.5f;
 		}
+		if (Key::isKeyHeld(GLFW_KEY_UP)) {
+			deltaY = 0.5f;
+		}
+		if (Key::isKeyHeld(GLFW_KEY_DOWN)) {
+			deltaY = -0.5f;
+		} 
 		glClearColor(curScene->backColor.r, curScene->backColor.g, curScene->backColor.b, 1.0f);
 		//Clear Screen for next draw
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		trans = glm::translate(trans, glm::vec3(deltaX * dt, 0.0f, 0.0f));
-		//trans = glm::rotate(trans, glm::radians(0.1f), glm::vec3(0.0, 0.0, 1.0));
-		deltaX = 0.0f;
+		trans = glm::translate(trans, glm::vec3(deltaX * dt, deltaY * dt, 0.0f));
+		//trans = glm::rotate(trans, glm::radians(0.1f), glm::vec3(0.0, 0.0, 1.0));;
 		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+		deltaY = 0.0f;
+		deltaX = 0.0f;
 		switch (currentChallenge) {
 		case 1: {
 			drawTriangle();

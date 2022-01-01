@@ -152,6 +152,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\..\..\..\..\glad\src\glad.c" />
+    <ClCompile Include="Graphics.cpp" />
     <ClCompile Include="Helper.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="main.cpp" />
@@ -160,6 +161,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core.h" />
+    <ClInclude Include="Graphics.h" />
     <ClInclude Include="Helper.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Window.h" />
