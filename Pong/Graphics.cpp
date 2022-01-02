@@ -39,3 +39,9 @@ void setupShape(uint32_t* vao, uint32_t* vbo, uint32_t* ebo, std::vector<Vertex>
 	createElementBuffer(ebo);
 }
 
+void destroyGlContext(glContext* context) {
+	glDeleteBuffers(1, &(context->vao));
+	glDeleteBuffers(1, &(context->ebo));
+	glDeleteVertexArrays(1, &(context->vao));
+}
+

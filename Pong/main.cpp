@@ -3,46 +3,34 @@
 #include "Graphics.h"
 #define TAU (M_PI * 2)
 
-
 struct Camera {
-	glm::mat4x4 projectionMatrix;
-	glm::mat4x4 viewMatrix;
+	glm::mat4x4 projMat;
+	glm::mat4x4 viewMat;
 	glm::vec2 pos;
 };
 
-struct glContext {
-	uint32_t vao;
-	uint32_t vbo;
-	uint32_t ebo;
-};
+void adjustProjection(Camera* cam) {
+	cam->projMat = glm::mat4(1.0f);
+	cam->projMat =  glm::ortho(0.0f, 32.0f * 40.0f, 0.0f, 32.0f * 21.0f, 0.0f, 100.0f);
+}
 
+void initViewMatrix(Camera* cam) {
+	glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+	glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+	cam->viewMat = glm::mat4(1.0f);
+	cam->viewMat = cam->viewMat * glm::lookAt(
+		glm::vec3(cam->pos.x, cam->pos.y, 20.0f),
+		glm::vec3(cameraFront.x + cam->pos.x, cameraFront.y + cam->pos.y, 0.0f),
+		cameraUp);
+}
 
-/* Camera* initCamera() {
-	Camera* cam = new Camera();
-	cam->pos = { 2.0f, 2.0f };
-	cam->viewMatrix = glm::mat
-} */
-
-
-enum class ChallengeType {
-	None = 0,
-	Challenge1,
-	Challenge2, 
-	Challenge3,
-	Challenge4,
-	Challenge5,
-	Challenge6
-};
-
-enum class SceneType {
-	None = 0,
-	Scene1,
-	Scene2,
-	Scene3,
-	Scene4,
-	Scene5
-};
-
+Camera* initCamera(glm::vec2 _pos) {
+	Camera *cam = new Camera();
+	cam->pos = _pos;
+	adjustProjection(cam);
+	initViewMatrix(cam);
+	return cam;
+}
 
 struct Scene {
 	glm::vec3 backColor;
@@ -124,11 +112,6 @@ void updateScene(double dt, Scene** cur_scene) {
 
 }
 
-void destroyGlContext(glContext* context) {
-	glDeleteBuffers(1, &(context->vao));
-	glDeleteBuffers(1, &(context->ebo));
-	glDeleteVertexArrays(1, &(context->vao));
-}
 //Challenge 1 Draw a Triangle
 static std::vector<Vertex> triangleArray = {
 	Vertex{glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec4(0.9f, 0.8f, 0.2f, 1.0f)},
@@ -156,19 +139,24 @@ void drawTriangleElements() {
 }
 
 void destroyTriangle() {
-	glDeleteBuffers(1, &Triangle.vbo);
-	glDeleteBuffers(1, &Triangle.ebo);
-	glDeleteVertexArrays(1, &Triangle.vao);
+	destroyGlContext(&Triangle);
 }
 
 static glContext Square;
 
-static std::vector<Vertex> squareArray = {
+/*static std::vector<Vertex> squareArray = {
 	Vertex{glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec4(0.11f, 0.8f, 0.76f, 1.0f)},
 	Vertex{glm::vec3(-0.5f,  0.5f, 0.0f), glm::vec4(0.1f,  0.9f, 0.12f, 1.0f)},
 	Vertex{glm::vec3( 0.5f,  0.5f, 0.0f), glm::vec4(0.12f, 0.9f, 0.1f,  1.0f)},
 	Vertex{glm::vec3( 0.5f, -0.5f, 0.0f), glm::vec4(0.12f, 0.1f, 0.9f,  1.0f)}
-};
+};  */
+
+static std::vector<Vertex> squareArray = {
+	Vertex{glm::vec3(0.0f, 0.0f, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f)},
+	Vertex{glm::vec3(0.0f,  300.0f, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f)},
+	Vertex{glm::vec3(300.0f,  300.0f, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f)},
+	Vertex{glm::vec3( 300.0f, 0.0f, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f)}
+}; 
 
 static uint32_t challenge2Elements[6] = {
 	0, 1, 2,
@@ -186,9 +174,7 @@ void drawChallenge2() {
 }
 
 void destroyChallenge2() {
-	glDeleteBuffers(1, &Square.vbo);
-	glDeleteBuffers(1, &Square.ebo);
-	glDeleteVertexArrays(1, &Square.vao);
+	destroyGlContext(&Square);
 }
 
 static uint32_t challenge3Elements[24] = {
@@ -212,7 +198,6 @@ static std::vector<Vertex> challenge3Star = {
 	Vertex{glm::vec3(-0.13f, -0.125f, 0.0f)  , glm::vec4(0.584f, 0.956f, 0.443f, 1.0f)}
 };																			 
 
-
 static glContext Star;
 
 void setupChallenge3() {
@@ -227,11 +212,7 @@ void drawChallenge3() {
 
 void destroyChallenge3() {
 	destroyGlContext(&Star);
-	//glDeleteBuffers(1, &Star.vbo);
-	//glDeleteBuffers(1, &Star.ebo);
-	//glDeleteVertexArrays(1, &Star.vao);
 }
-
 
 static std::vector<Vertex> challenge4Square = {
 	Vertex{glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec4(0.11f, 0.8f, 0.76f, 1.0f)},
@@ -247,24 +228,74 @@ static uint32_t challenge4Elements[8] = {
 	3, 0,
 };
 
-static uint32_t challenge4VAO;
-static uint32_t challenge4VBO;
-static uint32_t challenge4EBO;
+static glContext lineSquare;
 
 void setupChallenge4() {
-	setupShape(&challenge4VAO, &challenge4VBO, &challenge4EBO, &challenge4Square);
+	setupShape(&lineSquare.vao , &lineSquare.vbo, &lineSquare.ebo, &challenge4Square);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(challenge4Elements), challenge4Elements, GL_STATIC_DRAW);
 }
 
 void drawChallenge4() {
-	glBindVertexArray(challenge4VAO);
+	glBindVertexArray(lineSquare.vao);
 	glDrawElements(GL_LINES, 8, GL_UNSIGNED_INT, 0);
 }
 
 void destroyChallenge4() {
-	glDeleteBuffers(1, &challenge4VBO);
-	glDeleteBuffers(1, &challenge4EBO);
-	glDeleteVertexArrays(1, &challenge4VAO);
+	destroyGlContext(&lineSquare);
+}
+
+static glContext cube;
+static std::vector<Vertex> cubeArray = {
+	Vertex{glm::vec3(-1.0f,-1.0f,-1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)}, 
+	Vertex{glm::vec3(-1.0f,-1.0f, 1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},                
+	Vertex{glm::vec3(1.0f, 1.0f,-1.0f),  glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},              
+	Vertex{glm::vec3(-1.0f,-1.0f,-1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(-1.0f, 1.0f,-1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},               
+	Vertex{glm::vec3(1.0f,-1.0f, 1.0f),	 glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(-1.0f,-1.0f,-1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(1.0f,-1.0f,-1.0f),	 glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(1.0f, 1.0f,-1.0f),	 glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(1.0f,-1.0f,-1.0f),	 glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(-1.0f,-1.0f,-1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(-1.0f,-1.0f,-1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(-1.0f, 1.0f,-1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(1.0f,-1.0f, 1.0f),	 glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(-1.0f,-1.0f, 1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(-1.0f,-1.0f,-1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(-1.0f,-1.0f, 1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(1.0f,-1.0f, 1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(1.0f, 1.0f, 1.0f),	glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(1.0f,-1.0f,-1.0f),	glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(1.0f, 1.0f,-1.0f),	glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(1.0f,-1.0f,-1.0f),	glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(1.0f, 1.0f, 1.0f),	glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(1.0f,-1.0f, 1.0f),	glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(1.0f, 1.0f, 1.0f),	glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(1.0f, 1.0f,-1.0f),	glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(-1.0f, 1.0f,-1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(1.0f, 1.0f, 1.0f),	 glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(-1.0f, 1.0f,-1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(1.0f, 1.0f, 1.0f),	 glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(-1.0f, 1.0f, 1.0f), glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)},
+	Vertex{glm::vec3(1.0f,-1.0f, 1.0f),	 glm::vec4(255.0f, 255.0f, 255.0f, 1.0f)}
+};
+
+void setUpCube() {
+	setupShape(&cube.vao, &cube.vbo, &cube.ebo, &cubeArray);
+	//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(triangleElements), triangleElements, GL_STATIC_DRAW);
+}
+
+void drawCube() {
+	glBindVertexArray(cube.vao);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+}
+
+void destroyCube() {
+	destroyGlContext(&cube);
 }
 
 static int currentChallenge = 0;
@@ -289,10 +320,45 @@ void destroyChallenge() {
 		destroyChallenge4();
 		break;
 	}
+	case 6: {
+		destroyCube();
+		break;
+	}
 	default: {
 		break;
 	}
 	}
+}
+
+void drawChallenge() {
+	switch (currentChallenge) {
+		case 1: {
+			drawTriangle();
+			break;
+		}
+		case 2: {
+			drawTriangleElements();
+			break;
+		}
+		case 3: {
+			drawChallenge2();
+			break;
+		}
+		case 4: {
+			drawChallenge3();
+			break;
+		}
+		case 5: {
+			drawChallenge4();
+			break;
+		}
+		case 6: {
+			drawCube();
+		}
+		default: {
+			break;
+		}
+		}
 }
 
 int main() {
@@ -325,9 +391,10 @@ int main() {
 	bindShader(shaderId);
 	uint32_t transformLoc = glGetUniformLocation(shaderId, "transform");
 	glm::mat4 trans(1.0f);
-	
+	uint32_t viewLoc = glGetUniformLocation(shaderId, "view");
+	uint32_t projLoc = glGetUniformLocation(shaderId, "proj");
 
-
+	Camera* cam = initCamera(glm::vec2(0.0f, 0.0f));
 
 	Scene* curScene = initScene(250.0f / 255.0f, 119.0f/255.0f, 110.0f/255.0f);
 	static double fps = 1.0 / 60.0;
@@ -377,10 +444,14 @@ int main() {
 				currentChallenge = 5;
 			}
 		}
-		updateScene(dt, &curScene);
-		if (Mouse::mouseIsPressed[GLFW_MOUSE_BUTTON_LEFT]) {
-			printf("Left mouse click\n");
+		else if (Key::isKeyDown(GLFW_KEY_6)) {
+			if (currentChallenge != 6) {
+				destroyChallenge();
+				setUpCube();
+				currentChallenge = 6;
+			}
 		}
+		updateScene(dt, &curScene);
 		if (Key::keyIsPressed[GLFW_KEY_F]) {
 			toggleFullScreen(win, true);
 		}
@@ -388,29 +459,23 @@ int main() {
 			updateScene(dt, &curScene);
 			printf("Changed Scene\n");
 		}
-		if (Key::isKeyDown(GLFW_KEY_E)) {
-			printf("E is pressed\n");
-		}
 		if (Key::keyIsPressed[GLFW_KEY_M]) {
 			toggleFullScreen(win, false);
 		}
 		if (Key::keyIsPressed[GLFW_KEY_ESCAPE]) {
 			glfwSetWindowShouldClose(win->window, true);
 		}
-		/*if (Key::keyIsPressed[GLFW_KEY_LEFT]) {
-			deltaX = -0.5f;
-		} */
 		if (Key::isKeyHeld(GLFW_KEY_LEFT) ){
-			deltaX -= 0.5f;
+			deltaX = -100.0f;
 		}
 		if (Key::isKeyHeld(GLFW_KEY_RIGHT) ) {
-			deltaX = 0.5f;
+			deltaX = 100.0f;
 		}
 		if (Key::isKeyHeld(GLFW_KEY_UP)) {
-			deltaY = 0.5f;
+			deltaY = 100.0f;
 		}
 		if (Key::isKeyHeld(GLFW_KEY_DOWN)) {
-			deltaY = -0.5f;
+			deltaY = -100.0f;
 		} 
 		glClearColor(curScene->backColor.r, curScene->backColor.g, curScene->backColor.b, 1.0f);
 		//Clear Screen for next draw
@@ -418,44 +483,19 @@ int main() {
 
 		trans = glm::translate(trans, glm::vec3(deltaX * dt, deltaY * dt, 0.0f));
 		//trans = glm::rotate(trans, glm::radians(0.1f), glm::vec3(0.0, 0.0, 1.0));;
+		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(cam->projMat));
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(cam->viewMat));
 		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 		deltaY = 0.0f;
 		deltaX = 0.0f;
-		switch (currentChallenge) {
-		case 1: {
-			drawTriangle();
-			break;
-		}
-		case 2: {
-			drawTriangleElements();
-			break;
-		}
-		case 3: {
-			drawChallenge2();
-			break;
-		} 
-		case 4: {
-			drawChallenge3();
-			break;
-		}
-		case 5: {
-			drawChallenge4();
-			break;
-		}
-		default: {
-			break;
-		}
-		}
+		drawChallenge();
 
 		//Double Buffering
 		glfwSwapBuffers(win->window);
 		glfwPollEvents();
-		//Poll Events
 		
 		endFrameTime = glfwGetTime() , endSecondTime = glfwGetTime();
 		dt = endFrameTime - beginFrameTime;
-		//printf("%lf\n", dt);
-		//printf("%lf\n", dt);
 		frameCount++;
 		if (endSecondTime - beginSecondTime >= 1.0) {
 			printf("%dFPS\n", frameCount);
@@ -466,6 +506,7 @@ int main() {
 	}
 
 	free(curScene);
+	free(cam);
 
 	deleteWindow(win);
 
