@@ -1,9 +1,10 @@
 #include "Window.h"
 #include "Shader.h"
 #include "Graphics.h"
+#include "Camera.h"
 #define TAU (M_PI * 2)
 
-struct Camera {
+/* struct Camera {
 	glm::mat4x4 projMat;
 	glm::mat4x4 viewMat;
 	glm::vec2 pos;
@@ -30,7 +31,7 @@ Camera* initCamera(glm::vec2 _pos) {
 	adjustProjection(cam);
 	initViewMatrix(cam);
 	return cam;
-}
+} */
 
 struct Scene {
 	glm::vec3 backColor;
