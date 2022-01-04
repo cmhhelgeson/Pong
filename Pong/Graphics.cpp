@@ -8,6 +8,8 @@
 * GLsizei stride, (how many bytes each vertex is, sizeof(float)*3 + sizeof(float) * 4
 * const void* offsetPointer (asks for offset of attribute withint thed tata
 )*/
+
+
 void glDefineVertex() {
 	//Define how each element of the vertice is read in
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, pos));
@@ -15,6 +17,19 @@ void glDefineVertex() {
 
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
 	glEnableVertexAttribArray(1);
+}
+
+void glDefineVertexUV() {
+	//Define how each element of the vertice is read in
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexUV), (void*)offsetof(VertexUV, pos));
+	glEnableVertexAttribArray(0);
+
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(VertexUV), (void*)offsetof(VertexUV, color));
+	glEnableVertexAttribArray(1);
+
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexUV), (void*)offsetof(VertexUV, uv));
+	glEnableVertexAttribArray(2);
+
 }
 void createBasicVAO(uint32_t* vao) {
 	glCreateVertexArrays(1, vao);
@@ -27,6 +42,12 @@ void createArrayBuffer(uint32_t* vbo, std::vector<Vertex>* mesh) {
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * (*mesh).size(), (*mesh).data(), GL_STATIC_DRAW);
 }
 
+void createArrayBufferUV(uint32_t* vbo, std::vector<VertexUV> *mesh) {
+	glGenBuffers(1, vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, (*vbo));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(VertexUV) * (*mesh).size(), (*mesh).data(), GL_STATIC_DRAW);
+}
+
 void createElementBuffer(uint32_t* ebo) {
 	glGenBuffers(1, ebo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, (*ebo));
@@ -36,6 +57,13 @@ void setupShape(uint32_t* vao, uint32_t* vbo, uint32_t* ebo, std::vector<Vertex>
 	createBasicVAO(vao);
 	createArrayBuffer(vbo, mesh);
 	glDefineVertex();
+	createElementBuffer(ebo);
+} 
+
+void setupShapeUV(uint32_t* vao, uint32_t* vbo, uint32_t* ebo, std::vector<VertexUV>* mesh) {
+	createBasicVAO(vao);
+	createArrayBufferUV(vbo, mesh);
+	glDefineVertexUV();
 	createElementBuffer(ebo);
 }
 

@@ -2,7 +2,7 @@
 
 void adjustProjection(Camera* cam) {
 	cam->projMat = glm::mat4(1.0f);
-	cam->projMat =  glm::ortho(0.0f, 32.0f * 40.0f, 0.0f, 32.0f * 21.0f, 0.0f, 100.0f);
+	cam->projMat =  glm::ortho(0.0f, 32.0f * 40.0f, 0.0f, 32.0f * 40.0f, 0.0f, 100.0f);
 }
 
 void initViewMatrix(Camera* cam) {

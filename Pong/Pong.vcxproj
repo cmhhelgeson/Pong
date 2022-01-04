@@ -72,22 +72,22 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\glm;C:\glad\include;C:\glfw-3.3.6\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\stb\;C:\glm;C:\glad\include;C:\glfw-3.3.6\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\glfw-3.3.6\build\src\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\glm;C:\glad\include;C:\glfw-3.3.6\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\stb\;C:\glm;C:\glad\include;C:\glfw-3.3.6\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\glfw-3.3.6\build\src\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\glm;C:\glad\include;C:\glfw-3.3.6\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\stb\;C:\glm;C:\glad\include;C:\glfw-3.3.6\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\glfw-3.3.6\build\src\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\glm;C:\glad\include;C:\glfw-3.3.6\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\stb\;C:\glm;C:\glad\include;C:\glfw-3.3.6\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\glfw-3.3.6\build\src\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -153,6 +153,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\..\..\..\..\..\glad\src\glad.c" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="ChallengeDraw.cpp" />
     <ClCompile Include="Graphics.cpp" />
     <ClCompile Include="Helper.cpp" />
     <ClCompile Include="Input.cpp" />
@@ -162,6 +163,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="ChallengeDraw.h" />
     <ClInclude Include="core.h" />
     <ClInclude Include="Graphics.h" />
     <ClInclude Include="Helper.h" />
@@ -170,6 +172,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="default_frag.glsl" />
+    <None Include="default_uv_frag.glsl" />
+    <None Include="default_uv_vert.glsl" />
     <None Include="default_vert.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

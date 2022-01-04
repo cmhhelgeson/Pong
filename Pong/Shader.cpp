@@ -18,6 +18,7 @@ uint32_t compileShader(std::string vSrc, std::string fSrc) {
 	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
 	if (!success) {
 		glGetShaderInfoLog(vertexShader, 200, NULL, log);
+		glDeleteShader(vertexShader); //tinyurl.com/5d6fmsky
 		printf("Vertex shader compilation failed\n '%s'", log);
 	}
 	else {
@@ -32,6 +33,7 @@ uint32_t compileShader(std::string vSrc, std::string fSrc) {
 	glGetShaderiv(fragShader, GL_COMPILE_STATUS, &success);
 	if (!success) {
 		glGetShaderInfoLog(fragShader, 200, NULL, log);
+		glDeleteShader(fragShader);
 		printf("Fragment shader compilation failed\n '%s'", log);
 	}
 	else {
@@ -50,6 +52,8 @@ uint32_t compileShader(std::string vSrc, std::string fSrc) {
 		glGetProgramInfoLog(programId, 200, NULL, log);
 		printf("ERROR::SHADER::PROGRAM::LINKING_FAILED\n '%s'", log);
 	}
+	glDetachShader(programId, vertexShader);
+	glDetachShader(programId, fragShader);
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragShader);
 	return programId;
@@ -57,4 +61,8 @@ uint32_t compileShader(std::string vSrc, std::string fSrc) {
 
 void bindShader(uint32_t programId) {
 	glUseProgram(programId);
+}
+
+void deleteShader(uint32_t programId) {
+	glDeleteProgram(programId);
 }

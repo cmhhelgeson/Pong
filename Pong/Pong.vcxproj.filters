@@ -39,6 +39,9 @@
     <ClCompile Include="Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ChallengeDraw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="core.h">
@@ -59,12 +62,21 @@
     <ClInclude Include="Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ChallengeDraw.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="default_vert.glsl">
       <Filter>Source Files</Filter>
     </None>
     <None Include="default_frag.glsl">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="default_uv_vert.glsl">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="default_uv_frag.glsl">
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>
