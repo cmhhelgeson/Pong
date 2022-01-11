@@ -2,6 +2,8 @@
 #include "Shader.h"
 #include "Graphics.h"
 #include "Camera.h"
+#include <entt/entt.hpp>
+#include <entt/core/type_traits.hpp>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 #define TAU (M_PI * 2)
@@ -17,12 +19,24 @@ struct Texture {
 	uint32_t id;
 };
 
-Texture* initTexture(const char* fp) {
+struct TransformComponent {
+	glm::mat4 transform;
+	TransformComponent() = default;
+	TransformComponent(const TransformComponent&) = default;
+	TransformComponent(const glm::mat4& _transform) : transform(_transform) {
+
+	}
+	operator const glm::mat4& () { return transform; }
+};
+
+static GLenum textureSlots[6] = { GL_TEXTURE0, GL_TEXTURE1, GL_TEXTURE2, GL_TEXTURE3, GL_TEXTURE4, GL_TEXTURE5};
+
+Texture* initTexture(std::string s, int slot) {
 	Texture* tex = new Texture();
-	tex->filepath = fp;
+	tex->filepath = s.c_str();
 	//Generate Texture on GPU
 	glGenTextures(1, &tex->id); //maybe set multiple textures in a larger buffer in future
-	glActiveTexture(GL_TEXTURE0); //Different drivers have different numbers of texture slots, so past a certain number it might be helpful to have a system where texture slots are dynamically filled and emptied depending on need
+	glActiveTexture(textureSlots[slot]); //Different drivers have different numbers of texture slots, so past a certain number it might be helpful to have a system where texture slots are dynamically filled and emptied depending on need
 	glBindTexture(GL_TEXTURE_2D, tex->id);
 	//Set Texture parameters
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT); //wrap texture around horizontally
@@ -35,8 +49,14 @@ Texture* initTexture(const char* fp) {
 	stbi_uc *image = stbi_load(tex->filepath, &w, &h, &channels, 0);
 	if (image != nullptr) {
 		//Upload image to GPU. GL_RGBA appears twice for internal and external format
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h,
-			0, GL_RGBA, GL_UNSIGNED_BYTE, image);		
+		//Check for png, then upload accordingly
+		if (s.substr(s.length() - size_t(3), 3) == "png") {
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h,
+				0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+		} else {
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h,
+				0, GL_RGB, GL_UNSIGNED_BYTE, image);
+		}	
 	} else {
 		printf("Error could not load image '%s'", tex->filepath);
 	}
@@ -135,52 +155,169 @@ void updateScene(double dt, Scene** cur_scene) {
 
 static glContext Square;
 
-//Square without proj/view transformation
-/*static std::vector<Vertex> squareArray = {
-	Vertex{glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec4(0.11f, 0.8f, 0.76f, 1.0f)},
-	Vertex{glm::vec3(-0.5f,  0.5f, 0.0f), glm::vec4(0.1f,  0.9f, 0.12f, 1.0f)},
-	Vertex{glm::vec3( 0.5f,  0.5f, 0.0f), glm::vec4(0.12f, 0.9f, 0.1f,  1.0f)},
-	Vertex{glm::vec3( 0.5f, -0.5f, 0.0f), glm::vec4(0.12f, 0.1f, 0.9f,  1.0f)}
-};  */
-
-//Square with proj/view transformation
-static std::vector<Vertex> squareArray = {
-	Vertex{glm::vec3(0.0f, 0.0f, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f)},
-	Vertex{glm::vec3(0.0f,  300.0f, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f)},
-	Vertex{glm::vec3(300.0f,  300.0f, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f)},
-	Vertex{glm::vec3( 300.0f, 0.0f, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f)}
-};
-
-//Textured square with proj/view transformation
-static std::vector<VertexUV> squareArrayUV = {
-	VertexUV{glm::vec3(0.0f, 0.0f, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f), glm::vec2(0.0f, 1.0f)},
-	VertexUV{glm::vec3(0.0f,  300.0f, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f), glm::vec2(0.0f, 1.0f) },
-	VertexUV{glm::vec3(300.0f,  300.0f, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f), glm::vec2(0.0f, 1.0f)},
-	VertexUV{glm::vec3( 300.0f, 0.0f, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f), glm::vec2(0.0f, 1.0f)}
-}; 
-
-static uint32_t challenge2Elements[6] = {
-	0, 1, 2,
-	0, 2, 3
-};
-
-void setupChallenge2() {
-	setupShapeUV(&Square.vao, &Square.vbo, &Square.ebo, &squareArrayUV);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(challenge2Elements), challenge2Elements, GL_STATIC_DRAW);
+std::vector<Vertex> createSquare(float start, float width, float height) {
+	return {
+		Vertex{glm::vec3(start, start, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f)},
+		Vertex{glm::vec3(start,  start + height, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f)},
+		Vertex{glm::vec3(start + width,  start + height, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f)},
+		Vertex{glm::vec3(start + width, start, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f)}
+	};
 }
+
+//Two Quads in a single draw call
+std::vector<VertexUV> createSquareUV(float start, float width, float height, float tex_scale_w, float tex_scale_h) {
+	/* return {
+		VertexUV{glm::vec3(start, start, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f), glm::vec2(tex_scale_w, tex_scale_h)},           
+		VertexUV{glm::vec3(start,  start + height, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f), glm::vec2(tex_scale_w, 0.0f) },
+		VertexUV{glm::vec3(start + width,  start + height, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f), glm::vec2(0.0f, 0.0f)},
+		VertexUV{glm::vec3(start + width, start, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f), glm::vec2(0.0f, tex_scale_h)}, 
+
+		VertexUV{glm::vec3(start + 400.0f, start, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f), glm::vec2(tex_scale_w, tex_scale_h)},
+		VertexUV{glm::vec3(start + 400.0f,  start + height, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f), glm::vec2(tex_scale_w, 0.0f) },
+		VertexUV{glm::vec3(start + 400.0f + width,  start + height, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f), glm::vec2(0.0f, 0.0f)},
+		VertexUV{glm::vec3(start + 400.0f + width, start, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f), glm::vec2(0.0f, tex_scale_h)}
+	}; */
+
+	return {
+		VertexUV{glm::vec3(start, start, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f), glm::vec2(tex_scale_w, tex_scale_h), 0.0f},
+		VertexUV{glm::vec3(start,  start + height, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f), glm::vec2(tex_scale_w, 0.0f), 0.0f},
+		VertexUV{glm::vec3(start + width,  start + height, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f), glm::vec2(0.0f, 0.0f), 0.0f},
+		VertexUV{glm::vec3(start + width, start, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f), glm::vec2(0.0f, tex_scale_h), 0.0f},
+
+		VertexUV{glm::vec3(start + 400.0f, start, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f), glm::vec2(tex_scale_w, tex_scale_h), 1.0f},
+		VertexUV{glm::vec3(start + 400.0f,  start + height, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f), glm::vec2(tex_scale_w, 0.0f), 1.0f},
+		VertexUV{glm::vec3(start + 400.0f + width,  start + height, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f), glm::vec2(0.0f, 0.0f), 1.0f},
+		VertexUV{glm::vec3(start + 400.0f + width, start, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f), glm::vec2(0.0f, tex_scale_h), 1.0f}
+	};
+}
+
+static uint32_t challenge2Elements[12] = {
+	0, 1, 2, 0, 2, 3, 
+	4, 5, 6, 6, 7, 4
+};
+
+//STATIC DRAW BATCH RENDERING
+void setupChallenge2() {
+	std::vector<VertexUV> vec = createSquareUV(0.0f, 300.0f, 300.f, 1.0f, 1.0f);
+	setupShapeUV(&Square.vao, &Square.vbo, &Square.ebo, &vec);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(challenge2Elements), challenge2Elements, GL_STATIC_DRAW);
+} 
+
 
 void drawChallenge2() {
 	glBindVertexArray(Square.vao);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
 }
 
 void destroyChallenge2() {
 	destroyGlContext(&Square);
 }
 
+struct AssetPool {
+	std::unordered_map<std::string, ShaderInfo> shaders;
+	std::unordered_map<std::string, Texture> textures;
+};
+
+ShaderInfo GetShaderFromPool(AssetPool* pool, std::string vertSrc, std::string fragSrc) {
+	std::unordered_map<std::string, ShaderInfo>::iterator it = pool->shaders.find(vertSrc);
+	if (pool->shaders.find(vertSrc) != pool->shaders.end()) {
+		return it->second;
+	} else {
+		ShaderInfo shader; 
+		shader.id = compileShader(vertSrc, fragSrc);
+		pool->shaders.insert({ vertSrc, shader });
+		return shader;
+	}
+}
+
+Texture *GetTextureFromPool(AssetPool* pool, std::string fileName) {
+	std::unordered_map<std::string, Texture>::iterator it = pool->textures.find(fileName);
+	if (pool->textures.find(fileName) != pool->textures.end()) {
+		return &(it->second);
+	}
+	else {
+		Texture *texture = initTexture(fileName, pool->textures.size() - 1);
+		return texture; 
+	}
+
+
+}
+
 static int currentChallenge = 0;
 
+void update(double dt, entt::registry& registry) {
+	auto view = registry.view<TransformComponent>();
+	float deltaX = 0.0f;
+	float deltaY = 0.0f;
+	if (Key::isKeyHeld(GLFW_KEY_LEFT)) {
+		deltaX = -100.0f * dt;
+	}
+	if (Key::isKeyHeld(GLFW_KEY_RIGHT)) {
+		deltaX = 100.0f * dt;
+	}
+	if (Key::isKeyHeld(GLFW_KEY_UP)) {
+		deltaY = 100.0f * dt;
+	}
+	if (Key::isKeyHeld(GLFW_KEY_DOWN)) {
+		deltaY = -100.0f * dt;
+	}
+
+	
+
+	for (auto entity : view) {
+		TransformComponent& transform = view.get<TransformComponent>(entity);
+	}
+
+}
+
+uint32_t* generateQuadIndices(int num_quads) {
+	uint32_t* verts = (uint32_t*)malloc(num_quads * 6 * sizeof(uint32_t));
+
+	for (int i = 0; i < num_quads; i++) {
+		(*verts) = 0 + i * 4; //verts[0]
+		verts++;
+
+		(*verts) = 1 + i * 4; //verts[1]
+		verts++;
+
+		(*verts) = 2 + i * 4; //verts[2]
+		verts++;
+
+		(*verts) = 2 + i * 4; //verts[3]
+		verts++;
+
+		(*verts) = 3 + i * 4; //verts[4]
+		verts++;
+
+		(*verts) = 0 + i * 4; //verts[5]
+		verts++;
+	}
+	return verts;
+
+}
+
 int main() {
+	//entt practice
+	entt::registry registry;
+	//Entity uint32_t identifier
+	entt::entity entity = registry.create();
+	//Create component. Identifier + any args to be passed into the component
+	registry.emplace<TransformComponent>(entity, glm::mat4(1.0f));
+
+	auto view = registry.view<TransformComponent>();
+
+	for (auto entity : view) {
+		int a = 0;
+		if (registry.all_of<TransformComponent>(entity)) {
+			// returns true if the entity is still valid, false otherwise
+			bool b = registry.valid(entity);
+			//gets the actual version for the given entity
+			auto current = registry.current(entity);
+			a += 1;
+		}
+	}
+
+
 	if (!glfwInit()) {
 		printf("Failed to initialize GLFW");
 		return -1;
@@ -203,28 +340,21 @@ int main() {
 	glfwSetMouseButtonCallback(win->window, cmh_mouse_button_callback);
 	glfwSetFramebufferSizeCallback(win->window, cmh_resize_callback);
 
-	//ShaderInfo s1;
 	ShaderInfo s2;
-	//s1.id = compileShader("default_vert.glsl", "default_frag.glsl");
 	s2.id = compileShader("default_uv_vert.glsl", "default_uv_frag.glsl");
-	Texture* tex = initTexture("assets/TestImage2.png");
-	//Which pixels to draw to glViewport(lower left corner, width, height)
+	Texture* tex1 = initTexture(std::string("assets/TestImage2.png"), 0);
+	Texture* tex2 = initTexture(std::string("assets/wall.jpg"), 1);
 	glViewport(0, 0, win->sizeX, win->sizeY);
-	//bindShader(s1.id);
-	bindShader(s2.id);
-	uploadTexture(s2.id, "TEX_SAMPLER", 0);
-	//s1.transLoc = glGetUniformLocation(s1.id, "transform");
+	useShader(s2.id);
 	s2.transLoc = glGetUniformLocation(s2.id, "transform");
-	//s1.viewLoc = (glGetUniformLocation(s1.id, "view"));
 	s2.viewLoc = (glGetUniformLocation(s2.id, "view"));
-	//s1.projLoc = (glGetUniformLocation(s1.id, "proj"));
 	s2.projLoc = (glGetUniformLocation(s2.id, "proj"));
-	uint32_t samplerLoc = (glGetUniformLocation(s2.id, "TEX_SAMPLER"));
+	auto texturesLoc = glGetUniformLocation(s2.id, "uTextures");
+	int samplers[2] = { 0, 1 };
+	
+	//uint32_t samplerLoc = (glGetUniformLocation(s2.id, "TEX_SAMPLER"));
 	glm::mat4 trans(1.0f);
-
-
 	Camera* cam = initCamera(glm::vec2(0.0f, 0.0f));
-
 	Scene* curScene = initScene(250.0f / 255.0f, 119.0f/255.0f, 110.0f/255.0f);
 	static double fps = 1.0 / 60.0;
 	double beginFrameTime = glfwGetTime(), beginSecondTime = glfwGetTime();
@@ -235,12 +365,17 @@ int main() {
 
 	float deltaX = 0.0f;
 	float deltaY = 0.0f;
+
+	//float lerp = 0.0f;
 	
 	int frameCount = 0;
 	while (!glfwWindowShouldClose(win->window)) {
 		Key::keyPrevState = Key::keyCurState;
 		//Setup Draw
-		setupChallenge2();
+		if (currentChallenge == 0) {
+			setupChallenge2();
+			currentChallenge = 2;
+		}
 		updateScene(dt, &curScene);
 		if (Key::keyIsPressed[GLFW_KEY_F]) {
 			toggleFullScreen(win, true);
@@ -256,30 +391,35 @@ int main() {
 			glfwSetWindowShouldClose(win->window, true);
 		}
 		if (Key::isKeyHeld(GLFW_KEY_LEFT) ){
-			deltaX = -100.0f;
+			deltaX = -100.0f * dt;
 		}
 		if (Key::isKeyHeld(GLFW_KEY_RIGHT) ) {
-			deltaX = 100.0f;
+			deltaX = 100.0f * dt;
 		}
 		if (Key::isKeyHeld(GLFW_KEY_UP)) {
-			deltaY = 100.0f;
+			deltaY = 100.0f * dt;
 		}
 		if (Key::isKeyHeld(GLFW_KEY_DOWN)) {
-			deltaY = -100.0f;
+			deltaY = -100.0f * dt;
 		} 
+		/*if (Key::isKeyHeld(GLFW_KEY_A) && lerp >= 0.0f) {
+			lerp -= 0.5f * dt;
+		}
+		if (Key::isKeyHeld(GLFW_KEY_S) && lerp <= 1.0f) {
+			lerp += 0.5f * dt;
+		} */
 		glClearColor(curScene->backColor.r, curScene->backColor.g, curScene->backColor.b, 1.0f);
 		//Clear Screen for next draw
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		trans = glm::translate(trans, glm::vec3(deltaX * dt, deltaY * dt, 0.0f));
-		//trans = glm::rotate(trans, glm::radians(0.1f), glm::vec3(0.0, 0.0, 1.0));;
-		//glUniformMatrix4fv(s1.projLoc, 1, GL_FALSE, glm::value_ptr(cam->projMat));
-		//glUniformMatrix4fv(s1.viewLoc, 1, GL_FALSE, glm::value_ptr(cam->viewMat));
-		//glUniformMatrix4fv(s1.transLoc, 1, GL_FALSE, glm::value_ptr(trans));
+
+		trans = glm::translate(trans, glm::vec3(deltaX, deltaY, 0.0f));
 		glUniformMatrix4fv(s2.projLoc, 1, GL_FALSE, glm::value_ptr(cam->projMat));
 		glUniformMatrix4fv(s2.viewLoc, 1, GL_FALSE, glm::value_ptr(cam->viewMat));
 		glUniformMatrix4fv(s2.transLoc, 1, GL_FALSE, glm::value_ptr(trans));
-		glUniform1i(samplerLoc, 0);
+		glUniform1iv(texturesLoc, 2, samplers);
+		//glUniform1f(glGetUniformLocation(s2.id, "lerp"), lerp);
+		//glUniform1i(samplerLoc, 0);
 		deltaY = 0.0f;
 		deltaX = 0.0f;
 		drawChallenge2();
@@ -300,10 +440,10 @@ int main() {
 	}
 
 	destroyChallenge2();
-	//deleteShader(s1.id);
 	deleteShader(s2.id);
-	unbindTexture(tex);
-	free(tex);
+	unbindTexture(tex1);
+	//unbindTexture(tex2);
+	free(tex1);
 	free(curScene);
 	free(cam);
 

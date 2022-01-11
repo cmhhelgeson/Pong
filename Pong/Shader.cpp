@@ -59,7 +59,7 @@ uint32_t compileShader(std::string vSrc, std::string fSrc) {
 	return programId;
 }
 
-void bindShader(uint32_t programId) {
+void useShader(uint32_t programId) {
 	glUseProgram(programId);
 }
 

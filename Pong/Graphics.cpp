@@ -30,6 +30,9 @@ void glDefineVertexUV() {
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexUV), (void*)offsetof(VertexUV, uv));
 	glEnableVertexAttribArray(2);
 
+	glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(VertexUV), (void*)offsetof(VertexUV, texId));
+	glEnableVertexAttribArray(3);
+
 }
 void createBasicVAO(uint32_t* vao) {
 	glCreateVertexArrays(1, vao);
@@ -46,6 +49,12 @@ void createArrayBufferUV(uint32_t* vbo, std::vector<VertexUV> *mesh) {
 	glGenBuffers(1, vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, (*vbo));
 	glBufferData(GL_ARRAY_BUFFER, sizeof(VertexUV) * (*mesh).size(), (*mesh).data(), GL_STATIC_DRAW);
+}
+
+void createArrayBufferMass(uint32_t* vbo, uint32_t num_verts) {
+	glCreateBuffers(1, vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, (*vbo));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(VertexUV) * num_verts, nullptr, GL_DYNAMIC_DRAW); //dynamically populating vertex buffer
 }
 
 void createElementBuffer(uint32_t* ebo) {
@@ -65,6 +74,14 @@ void setupShapeUV(uint32_t* vao, uint32_t* vbo, uint32_t* ebo, std::vector<Verte
 	createArrayBufferUV(vbo, mesh);
 	glDefineVertexUV();
 	createElementBuffer(ebo);
+}
+
+void setupShapeMass(uint32_t* vao, uint32_t* vbo, uint32_t* ebo) {
+	createBasicVAO(vao);
+	createArrayBufferMass(vbo, 100);
+	glDefineVertexUV();
+	createElementBuffer(ebo);
+
 }
 
 void destroyGlContext(glContext* context) {

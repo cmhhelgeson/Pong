@@ -26,5 +26,6 @@ public:
 };
 
 uint32_t compileShader(std::string vSrc, std::string fSrc);
-void bindShader(uint32_t programId);
+uint32_t compileShader(std::string src);
+void useShader(uint32_t programId);
 void deleteShader(uint32_t programId);
