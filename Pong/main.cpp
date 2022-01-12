@@ -218,15 +218,16 @@ struct AssetPool {
 	std::unordered_map<std::string, Texture> textures;
 };
 
-ShaderInfo GetShaderFromPool(AssetPool* pool, std::string vertSrc, std::string fragSrc) {
+ShaderInfo *GetShaderFromPool(AssetPool* pool, std::string vertSrc, std::string fragSrc) {
 	std::unordered_map<std::string, ShaderInfo>::iterator it = pool->shaders.find(vertSrc);
-	if (pool->shaders.find(vertSrc) != pool->shaders.end()) {
-		return it->second;
+	if (it != pool->shaders.end()) {
+		return &(it->second);
 	} else {
 		ShaderInfo shader; 
 		shader.id = compileShader(vertSrc, fragSrc);
 		pool->shaders.insert({ vertSrc, shader });
-		return shader;
+		it = pool->shaders.find(vertSrc);
+		return &(it->second);
 	}
 }
 
@@ -239,8 +240,6 @@ Texture *GetTextureFromPool(AssetPool* pool, std::string fileName) {
 		Texture *texture = initTexture(fileName, pool->textures.size() - 1);
 		return texture; 
 	}
-
-
 }
 
 static int currentChallenge = 0;
@@ -296,28 +295,8 @@ uint32_t* generateQuadIndices(int num_quads) {
 
 }
 
+
 int main() {
-	//entt practice
-	entt::registry registry;
-	//Entity uint32_t identifier
-	entt::entity entity = registry.create();
-	//Create component. Identifier + any args to be passed into the component
-	registry.emplace<TransformComponent>(entity, glm::mat4(1.0f));
-
-	auto view = registry.view<TransformComponent>();
-
-	for (auto entity : view) {
-		int a = 0;
-		if (registry.all_of<TransformComponent>(entity)) {
-			// returns true if the entity is still valid, false otherwise
-			bool b = registry.valid(entity);
-			//gets the actual version for the given entity
-			auto current = registry.current(entity);
-			a += 1;
-		}
-	}
-
-
 	if (!glfwInit()) {
 		printf("Failed to initialize GLFW");
 		return -1;
@@ -351,9 +330,14 @@ int main() {
 	s2.projLoc = (glGetUniformLocation(s2.id, "proj"));
 	auto texturesLoc = glGetUniformLocation(s2.id, "uTextures");
 	int samplers[2] = { 0, 1 };
-	
-	//uint32_t samplerLoc = (glGetUniformLocation(s2.id, "TEX_SAMPLER"));
-	glm::mat4 trans(1.0f);
+
+	//entt practice
+	entt::registry registry;
+	//Entity uint32_t identifier
+	entt::entity entity = registry.create();
+	//Create component. Identifier + any args to be passed into the component
+	registry.emplace<TransformComponent>(entity, glm::mat4(1.0f));
+
 	Camera* cam = initCamera(glm::vec2(0.0f, 0.0f));
 	Scene* curScene = initScene(250.0f / 255.0f, 119.0f/255.0f, 110.0f/255.0f);
 	static double fps = 1.0 / 60.0;
@@ -365,8 +349,6 @@ int main() {
 
 	float deltaX = 0.0f;
 	float deltaY = 0.0f;
-
-	//float lerp = 0.0f;
 	
 	int frameCount = 0;
 	while (!glfwWindowShouldClose(win->window)) {
@@ -402,24 +384,17 @@ int main() {
 		if (Key::isKeyHeld(GLFW_KEY_DOWN)) {
 			deltaY = -100.0f * dt;
 		} 
-		/*if (Key::isKeyHeld(GLFW_KEY_A) && lerp >= 0.0f) {
-			lerp -= 0.5f * dt;
-		}
-		if (Key::isKeyHeld(GLFW_KEY_S) && lerp <= 1.0f) {
-			lerp += 0.5f * dt;
-		} */
 		glClearColor(curScene->backColor.r, curScene->backColor.g, curScene->backColor.b, 1.0f);
 		//Clear Screen for next draw
 		glClear(GL_COLOR_BUFFER_BIT);
 
-
-		trans = glm::translate(trans, glm::vec3(deltaX, deltaY, 0.0f));
 		glUniformMatrix4fv(s2.projLoc, 1, GL_FALSE, glm::value_ptr(cam->projMat));
 		glUniformMatrix4fv(s2.viewLoc, 1, GL_FALSE, glm::value_ptr(cam->viewMat));
-		glUniformMatrix4fv(s2.transLoc, 1, GL_FALSE, glm::value_ptr(trans));
+		auto& trans = registry.get<TransformComponent>(entity);
+		trans.transform = glm::translate(trans.transform, glm::vec3(deltaX, deltaY, 0.0f));
+		glUniformMatrix4fv(s2.transLoc, 1, GL_FALSE, glm::value_ptr(trans.transform));
+
 		glUniform1iv(texturesLoc, 2, samplers);
-		//glUniform1f(glGetUniformLocation(s2.id, "lerp"), lerp);
-		//glUniform1i(samplerLoc, 0);
 		deltaY = 0.0f;
 		deltaX = 0.0f;
 		drawChallenge2();
