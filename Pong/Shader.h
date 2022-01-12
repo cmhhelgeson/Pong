@@ -8,6 +8,7 @@ public:
 	uint32_t projLoc;
 	uint32_t viewLoc;
 	uint32_t transLoc;
+	uint32_t textureLoc;
 
 	ShaderInfo() {
 		id = 0;

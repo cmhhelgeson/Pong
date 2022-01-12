@@ -31,7 +31,8 @@ struct TransformComponent {
 
 static GLenum textureSlots[6] = { GL_TEXTURE0, GL_TEXTURE1, GL_TEXTURE2, GL_TEXTURE3, GL_TEXTURE4, GL_TEXTURE5};
 
-Texture* initTexture(std::string s, int slot) {
+//Create texture pointer
+/* Texture* initTexture(std::string s, int slot) {
 	Texture* tex = new Texture();
 	tex->filepath = s.c_str();
 	//Generate Texture on GPU
@@ -62,11 +63,40 @@ Texture* initTexture(std::string s, int slot) {
 	}
 	stbi_image_free(image);
 	return tex;
-}
+} */
 
-void bindTexture(Texture *tex) {
-	glBindTexture(GL_TEXTURE_2D, tex->id);
-}
+Texture initTexture(std::string s, int slot) {
+	Texture tex;
+	tex.filepath = s.c_str();
+	//Generate Texture on GPU
+	glGenTextures(1, &tex.id); //maybe set multiple textures in a larger buffer in future
+	glActiveTexture(textureSlots[slot]); //Different drivers have different numbers of texture slots, so past a certain number it might be helpful to have a system where texture slots are dynamically filled and emptied depending on need
+	glBindTexture(GL_TEXTURE_2D, tex.id);
+	//Set Texture parameters
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT); //wrap texture around horizontally
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT); //wrap texture vertically
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	int w;
+	int h;
+	int channels;
+	stbi_uc *image = stbi_load(tex.filepath, &w, &h, &channels, 0);
+	if (image != nullptr) {
+		//Upload image to GPU. GL_RGBA appears twice for internal and external format
+		//Check for png, then upload accordingly
+		if (s.substr(s.length() - size_t(3), 3) == "png") {
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h,
+				0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+		} else {
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h,
+				0, GL_RGB, GL_UNSIGNED_BYTE, image);
+		}
+	} else {
+		printf("Error could not load image '%s'", tex.filepath);
+	}
+	stbi_image_free(image);
+	return tex;
+} 
 
 void unbindTexture(Texture* tex) {
 	glBindTexture(GL_TEXTURE_2D, tex->id);
@@ -237,9 +267,31 @@ Texture *GetTextureFromPool(AssetPool* pool, std::string fileName) {
 		return &(it->second);
 	}
 	else {
-		Texture *texture = initTexture(fileName, pool->textures.size() - 1);
-		return texture; 
+		Texture texture = initTexture(fileName, pool->textures.size() - 1);
+		it = pool->textures.find(fileName);
+		return &(it->second); 
 	}
+}
+
+void addShaderAsset(AssetPool *pool, std::string vrtSrc, std::string fragSrc) {
+	ShaderInfo s;
+	s.id = compileShader(vrtSrc, fragSrc);
+	useShader(s.id);
+	s.transLoc = glGetUniformLocation(s.id, "transform");
+	s.viewLoc = (glGetUniformLocation(s.id, "view"));
+	s.projLoc = (glGetUniformLocation(s.id, "proj"));
+	s.textureLoc = glGetUniformLocation(s.id, "uTextures");
+	pool->shaders.insert({ vrtSrc, s });
+}
+
+void deleteShaderAssets(AssetPool* pool) {
+	for (auto it = pool->shaders.begin(); it != pool->shaders.end(); it++) {
+		deleteShader(it->second.id);
+	}
+}
+
+void addTextureAsset(AssetPool* pool, std::string fileName) {
+	return;
 }
 
 static int currentChallenge = 0;
@@ -319,16 +371,20 @@ int main() {
 	glfwSetMouseButtonCallback(win->window, cmh_mouse_button_callback);
 	glfwSetFramebufferSizeCallback(win->window, cmh_resize_callback);
 
-	ShaderInfo s2;
-	s2.id = compileShader("default_uv_vert.glsl", "default_uv_frag.glsl");
-	Texture* tex1 = initTexture(std::string("assets/TestImage2.png"), 0);
-	Texture* tex2 = initTexture(std::string("assets/wall.jpg"), 1);
+	AssetPool assets;
+	addShaderAsset(&assets, "default_uv_vert.glsl", "default_uv_frag.glsl");
+	
+
 	glViewport(0, 0, win->sizeX, win->sizeY);
+	Texture tex1 = initTexture(std::string("assets/TestImage2.png"), 0);
+	Texture tex2 = initTexture(std::string("assets/wall.jpg"), 1);
+	/*ShaderInfo s2;
+	s2.id = compileShader("default_uv_vert.glsl", "default_uv_frag.glsl");
 	useShader(s2.id);
 	s2.transLoc = glGetUniformLocation(s2.id, "transform");
 	s2.viewLoc = (glGetUniformLocation(s2.id, "view"));
 	s2.projLoc = (glGetUniformLocation(s2.id, "proj"));
-	auto texturesLoc = glGetUniformLocation(s2.id, "uTextures");
+	auto texturesLoc = glGetUniformLocation(s2.id, "uTextures") */
 	int samplers[2] = { 0, 1 };
 
 	//entt practice
@@ -388,13 +444,17 @@ int main() {
 		//Clear Screen for next draw
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		glUniformMatrix4fv(s2.projLoc, 1, GL_FALSE, glm::value_ptr(cam->projMat));
-		glUniformMatrix4fv(s2.viewLoc, 1, GL_FALSE, glm::value_ptr(cam->viewMat));
+		ShaderInfo* s = GetShaderFromPool(&assets, "default_uv_vert.glsl", "default_uv_frag.glsl");
+
+		//glUniformMatrix4fv(s2.projLoc, 1, GL_FALSE, glm::value_ptr(cam->projMat));
+		//glUniformMatrix4fv(s2.viewLoc, 1, GL_FALSE, glm::value_ptr(cam->viewMat));
+		glUniformMatrix4fv(s->projLoc, 1, GL_FALSE, glm::value_ptr(cam->projMat));
+		glUniformMatrix4fv(s->viewLoc, 1, GL_FALSE, glm::value_ptr(cam->viewMat));
 		auto& trans = registry.get<TransformComponent>(entity);
 		trans.transform = glm::translate(trans.transform, glm::vec3(deltaX, deltaY, 0.0f));
-		glUniformMatrix4fv(s2.transLoc, 1, GL_FALSE, glm::value_ptr(trans.transform));
+		glUniformMatrix4fv(s->transLoc, 1, GL_FALSE, glm::value_ptr(trans.transform));
 
-		glUniform1iv(texturesLoc, 2, samplers);
+		glUniform1iv(s->textureLoc, 2, samplers);
 		deltaY = 0.0f;
 		deltaX = 0.0f;
 		drawChallenge2();
@@ -415,10 +475,11 @@ int main() {
 	}
 
 	destroyChallenge2();
-	deleteShader(s2.id);
-	unbindTexture(tex1);
+	deleteShaderAssets(&assets);
+	//deleteShader(s2.id);
+	unbindTexture(&tex1);
 	//unbindTexture(tex2);
-	free(tex1);
+	//free(&tex1);
 	free(curScene);
 	free(cam);
 
