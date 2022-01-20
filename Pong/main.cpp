@@ -29,10 +29,41 @@ struct TransformComponent {
 	operator const glm::mat4& () { return transform; }
 };
 
+static glm::vec2 standardTextureUV[4] = {
+	glm::vec2(1.0f, 1.0f),
+	glm::vec2(1.0f, 0.0f),
+	glm::vec2(0.0f, 1.0f),
+	glm::vec2(0.0f, 0.0f)
+};
+
+struct SpriteRendererComponent {
+	glm::vec4 color;
+	glm::vec2* texCoords;
+	Texture* texture;
+
+	SpriteRendererComponent() = default;
+	SpriteRendererComponent(const glm::vec4& _color) : color(_color) {
+		texture = nullptr;
+		texCoords = standardTextureUV;
+	}
+	SpriteRendererComponent(Texture* _texture): texture(_texture) {
+		color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		texCoords = standardTextureUV;
+	}
+
+	SpriteRendererComponent(Texture* _texture, glm::vec2* _coords) :
+		texture(_texture), texCoords(_coords) {
+		color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+	}
+
+
+
+};
+
 static GLenum textureSlots[6] = { GL_TEXTURE0, GL_TEXTURE1, GL_TEXTURE2, GL_TEXTURE3, GL_TEXTURE4, GL_TEXTURE5};
 
 //Create texture pointer
-/* Texture* initTexture(std::string s, int slot) {
+/* Texture* initTexturePointer(std::string s, int slot) {
 	Texture* tex = new Texture();
 	tex->filepath = s.c_str();
 	//Generate Texture on GPU
@@ -112,18 +143,30 @@ void uploadTexture(uint32_t id, const char* name, uint32_t tex_slot) {
 namespace Input {
 	namespace Key {
 		bool keyIsPressed[GLFW_KEY_LAST];
+		bool keyIsHeld[GLFW_KEY_LAST];
 		std::array<bool, GLFW_KEY_LAST> keyCurState = { 0 };
 		std::array<bool, GLFW_KEY_LAST> keyPrevState = { 0 };
 		bool isKeyDown(int key) {
 			if (key >= 0 && key < GLFW_KEY_LAST) {
-				return keyIsPressed[key];
+				bool k = keyIsPressed[key];
+				keyIsPressed[key] = false;
+				return k;
 			}
 		}
 		bool isKeyHeld(int key) {
 			if (key >= 0 && key < GLFW_KEY_LAST) {
 				return (keyCurState[key] == keyPrevState[key] && keyCurState[key] == GLFW_PRESS);
 			}
-		}	
+		}
+		
+		bool singlePress(int key) {
+			if (key >= 0 && key < GLFW_KEY_LAST) {
+				return (keyIsPressed[key] && !keyIsHeld[key]);
+			}
+
+		}
+
+
 	}
 	namespace Mouse {
 		bool mouseIsPressed[GLFW_MOUSE_BUTTON_LAST];
@@ -135,6 +178,7 @@ using namespace Input;
 
 void cmh_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (key >= 0 && key < GLFW_KEY_LAST) {
+		//Key::keyIsHeld[key] = (Key::keyIsPressed[key] && action == GLFW_PRESS);
 		Key::keyIsPressed[key] = action == GLFW_PRESS;
 		std::cout << "Prev State: " << Key::keyPrevState[key] << " Current State: " << Key::keyCurState[key] << '\n'; 
 		if (action != GLFW_REPEAT) {
@@ -195,8 +239,8 @@ std::vector<Vertex> createSquare(float start, float width, float height) {
 }
 
 //Two Quads in a single draw call
-std::vector<VertexUV> createSquareUV(float start, float width, float height, float tex_scale_w, float tex_scale_h) {
-	/* return {
+/*std::vector<VertexUV> createSquareUV(float start, float width, float height, float tex_scale_w, float tex_scale_h) {
+	 return {
 		VertexUV{glm::vec3(start, start, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f), glm::vec2(tex_scale_w, tex_scale_h)},           
 		VertexUV{glm::vec3(start,  start + height, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f), glm::vec2(tex_scale_w, 0.0f) },
 		VertexUV{glm::vec3(start + width,  start + height, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f), glm::vec2(0.0f, 0.0f)},
@@ -206,7 +250,7 @@ std::vector<VertexUV> createSquareUV(float start, float width, float height, flo
 		VertexUV{glm::vec3(start + 400.0f,  start + height, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f), glm::vec2(tex_scale_w, 0.0f) },
 		VertexUV{glm::vec3(start + 400.0f + width,  start + height, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f), glm::vec2(0.0f, 0.0f)},
 		VertexUV{glm::vec3(start + 400.0f + width, start, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f), glm::vec2(0.0f, tex_scale_h)}
-	}; */
+	}; 
 
 	return {
 		VertexUV{glm::vec3(start, start, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f), glm::vec2(tex_scale_w, tex_scale_h), 0.0f},
@@ -217,31 +261,89 @@ std::vector<VertexUV> createSquareUV(float start, float width, float height, flo
 		VertexUV{glm::vec3(start + 400.0f, start, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f), glm::vec2(tex_scale_w, tex_scale_h), 1.0f},
 		VertexUV{glm::vec3(start + 400.0f,  start + height, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f), glm::vec2(tex_scale_w, 0.0f), 1.0f},
 		VertexUV{glm::vec3(start + 400.0f + width,  start + height, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f), glm::vec2(0.0f, 0.0f), 1.0f},
-		VertexUV{glm::vec3(start + 400.0f + width, start, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f), glm::vec2(0.0f, tex_scale_h), 1.0f}
+		VertexUV{glm::vec3(start + 400.0f + width, start, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f), glm::vec2(0.0f, tex_scale_h), 1.0f}, 
+
+		VertexUV{glm::vec3(start + 700.0f, start, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f), glm::vec2(tex_scale_w, tex_scale_h), 0.0f},
+		VertexUV{glm::vec3(start + 700.0f,  start + height, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f), glm::vec2(tex_scale_w, 0.0f), 0.0f},
+		VertexUV{glm::vec3(start + 700.0f + width,  start + height, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f), glm::vec2(0.0f, 0.0f), 0.0f},
+		VertexUV{glm::vec3(start + 700.0f + width, start, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f), glm::vec2(0.0f, tex_scale_h), 0.0f}
 	};
+} */
+
+void fillVectorWithQuads(std::vector<VertexUV>& vec, float start, float width, float height, float tex_scale_w, float tex_scale_h, int numRows, int numCols, int numTexIds) {
+	float curId = 0.0f;
+	float horizontalOffset = 0.0f;
+	float verticalOffset = 0.0f;
+	for (int y = 0; y < numCols; y++) {
+		for (int x = 0; x < numRows; x++) {
+			vec.push_back(VertexUV{ glm::vec3(start + horizontalOffset, start + verticalOffset, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f), glm::vec2(tex_scale_w, tex_scale_h), curId });
+			vec.push_back(VertexUV{ glm::vec3(start + horizontalOffset,  start + height + verticalOffset, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f), glm::vec2(tex_scale_w, 0.0f), curId });
+			vec.push_back(VertexUV{ glm::vec3(start + width + horizontalOffset,  start + height + verticalOffset, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f), glm::vec2(0.0f, 0.0f), curId }); 
+			vec.push_back(VertexUV{ glm::vec3(start + width + horizontalOffset, start + verticalOffset, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f), glm::vec2(0.0f, tex_scale_h), curId });
+			curId++;
+			if (curId >= numTexIds) {
+				curId = 0;
+			}
+			horizontalOffset += width;
+		}
+		horizontalOffset = 0.0f;
+		verticalOffset += height;
+	}
+	
+
 }
 
-static uint32_t challenge2Elements[12] = {
-	0, 1, 2, 0, 2, 3, 
-	4, 5, 6, 6, 7, 4
-};
 
-//STATIC DRAW BATCH RENDERING
-void setupChallenge2() {
-	std::vector<VertexUV> vec = createSquareUV(0.0f, 300.0f, 300.f, 1.0f, 1.0f);
+
+uint32_t* generateQuadIndices(int num_quads) {
+	uint32_t* verts = (uint32_t*)malloc(num_quads * 6 * sizeof(uint32_t));
+	uint32_t *begin = verts;
+
+	for (int i = 0; i < num_quads; i++) {
+		(*verts) = 0 + i * 4; //verts[0]
+		verts++;
+
+		(*verts) = 1 + i * 4; //verts[1]
+		verts++;
+
+		(*verts) = 2 + i * 4; //verts[2]
+		verts++;
+
+		(*verts) = 2 + i * 4; //verts[3]
+		verts++;
+
+		(*verts) = 3 + i * 4; //verts[4]
+		verts++;
+
+		(*verts) = 0 + i * 4; //verts[5]
+		verts++;
+	}
+	return begin;
+
+}
+
+
+//STATIC DRAW BATCH RENDERING CHALLENGE 2
+void setupChallenge2(int numRows, int numCols) {
+	//std::vector<VertexUV> vec = createSquareUV(0.0f, 100.0f, 100.f, 1.0f, 1.0f);
+	std::vector<VertexUV> vec;
+	fillVectorWithQuads(vec, 0.0f, 100.0f, 100.0f, 1.0f, 1.0f, numRows, numCols, 2);
 	setupShapeUV(&Square.vao, &Square.vbo, &Square.ebo, &vec);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(challenge2Elements), challenge2Elements, GL_STATIC_DRAW);
+	uint32_t* challenge2Elements = generateQuadIndices(numRows * numCols);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, (numRows * numCols * 6 * sizeof(uint32_t)), challenge2Elements, GL_STATIC_DRAW);
+	free(challenge2Elements);
 } 
 
 
-void drawChallenge2() {
+void drawChallenge2(int numRows, int numCols) {
 	glBindVertexArray(Square.vao);
-	glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, numRows * numCols * 6, GL_UNSIGNED_INT, 0);
 }
 
 void destroyChallenge2() {
 	destroyGlContext(&Square);
 }
+
 
 struct AssetPool {
 	std::unordered_map<std::string, ShaderInfo> shaders;
@@ -321,31 +423,7 @@ void update(double dt, entt::registry& registry) {
 
 }
 
-uint32_t* generateQuadIndices(int num_quads) {
-	uint32_t* verts = (uint32_t*)malloc(num_quads * 6 * sizeof(uint32_t));
 
-	for (int i = 0; i < num_quads; i++) {
-		(*verts) = 0 + i * 4; //verts[0]
-		verts++;
-
-		(*verts) = 1 + i * 4; //verts[1]
-		verts++;
-
-		(*verts) = 2 + i * 4; //verts[2]
-		verts++;
-
-		(*verts) = 2 + i * 4; //verts[3]
-		verts++;
-
-		(*verts) = 3 + i * 4; //verts[4]
-		verts++;
-
-		(*verts) = 0 + i * 4; //verts[5]
-		verts++;
-	}
-	return verts;
-
-}
 
 
 int main() {
@@ -374,17 +452,9 @@ int main() {
 	AssetPool assets;
 	addShaderAsset(&assets, "default_uv_vert.glsl", "default_uv_frag.glsl");
 	
-
 	glViewport(0, 0, win->sizeX, win->sizeY);
 	Texture tex1 = initTexture(std::string("assets/TestImage2.png"), 0);
 	Texture tex2 = initTexture(std::string("assets/wall.jpg"), 1);
-	/*ShaderInfo s2;
-	s2.id = compileShader("default_uv_vert.glsl", "default_uv_frag.glsl");
-	useShader(s2.id);
-	s2.transLoc = glGetUniformLocation(s2.id, "transform");
-	s2.viewLoc = (glGetUniformLocation(s2.id, "view"));
-	s2.projLoc = (glGetUniformLocation(s2.id, "proj"));
-	auto texturesLoc = glGetUniformLocation(s2.id, "uTextures") */
 	int samplers[2] = { 0, 1 };
 
 	//entt practice
@@ -401,6 +471,9 @@ int main() {
 	double endFrameTime = glfwGetTime(), endSecondTime = glfwGetTime();
 	double dt = -1.0f;
 
+	int numCols = 3;
+	int numRows = 3;
+
 	currentChallenge = 0;
 
 	float deltaX = 0.0f;
@@ -411,7 +484,7 @@ int main() {
 		Key::keyPrevState = Key::keyCurState;
 		//Setup Draw
 		if (currentChallenge == 0) {
-			setupChallenge2();
+			setupChallenge2(numRows, numCols);
 			currentChallenge = 2;
 		}
 		updateScene(dt, &curScene);
@@ -440,6 +513,16 @@ int main() {
 		if (Key::isKeyHeld(GLFW_KEY_DOWN)) {
 			deltaY = -100.0f * dt;
 		} 
+		if (Key::isKeyDown(GLFW_KEY_R)) {
+			destroyChallenge2();
+			numRows = numRows + 1;
+			setupChallenge2(numRows, numCols);
+		}
+		if (Key::isKeyDown(GLFW_KEY_C)) {
+			destroyChallenge2();
+			numCols = numCols + 1;
+			setupChallenge2(numRows, numCols);
+		}
 		glClearColor(curScene->backColor.r, curScene->backColor.g, curScene->backColor.b, 1.0f);
 		//Clear Screen for next draw
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -457,7 +540,7 @@ int main() {
 		glUniform1iv(s->textureLoc, 2, samplers);
 		deltaY = 0.0f;
 		deltaX = 0.0f;
-		drawChallenge2();
+		drawChallenge2(numRows, numCols);
 
 		//Double Buffering
 		glfwSwapBuffers(win->window);
