@@ -17,6 +17,8 @@ struct Scene {
 struct Texture {
 	const char* filepath;
 	uint32_t id;
+	int width;
+	int height;
 };
 
 struct TransformComponent {
@@ -27,6 +29,90 @@ struct TransformComponent {
 
 	}
 	operator const glm::mat4& () { return transform; }
+};
+
+struct RenderBatch {
+	const int pos_size = 2;
+	const int color_size = 4;
+	const int pos_offset = 0;
+	const int color_offset = pos_offset + pos_size * sizeof(float);
+	const int vertex_size = 6;
+	const int vertex_size_bytes = vertex_size * sizeof(float);
+
+};
+
+struct Sprite {
+	Texture* texture;
+	glm::vec2 texCoords[4];
+	Sprite() = default;
+	Sprite(Texture* _texture) {
+		texture = _texture;
+		texCoords[0] = { 1.0f, 1.0f };
+		texCoords[1] = { 1.0f, 0.0f };
+		texCoords[2] = { 0.0f, 0.0f };
+		texCoords[3] = { 0.0f, 1.0f };
+	}
+
+	Sprite(Texture* _texture, glm::vec2 _coords) {
+		texture = _texture;
+		texCoords[0] = { _coords.x, _coords.y };
+		texCoords[1] = { _coords.x, 0.0f };
+		texCoords[2] = { 0.0f, 0.0f };
+		texCoords[3] = { 0.0f, _coords.y };
+	}
+	Sprite(Texture* _texture, glm::vec2 *texCoords) {
+		texture = _texture;
+		for (int i = 0; i < 4; i++) {
+			texCoords[0] = (*texCoords);
+			texCoords++;
+		}
+	}
+};
+
+struct SpriteSheet {
+	Texture* texture;
+	Sprite* sprites;
+	SpriteSheet() = default;
+	SpriteSheet(Texture* tex, int spr_w, int spr_h, int numSprites, int spacing) {
+		sprites = (Sprite*)malloc(numSprites * sizeof(Sprite));
+		int currentX = 0;
+		int currentY = texture->height - spr_h;
+		for (int i = 0; i < numSprites; i++) {
+			//Get the normalized  coordinates of the sprite within the texture
+			float nLeft = currentX / float(texture->width);
+			float nRight = (currentX + spr_w) / float(texture->width);
+			float nBottom = currentY / float(texture->height);
+			float nTop = (currentY + spr_h) / float(texture->height);
+			glm::vec2 coords[4] = {
+				{nRight, nTop},
+				{nRight, nBottom},
+				{nLeft, nBottom},
+				{nLeft, nTop}
+			};
+			sprites = new Sprite(texture, coords);
+			sprites++;
+			currentX += spr_w + spacing;
+			if (currentX >= texture->width) {
+				currentX = 0.0f;
+				currentY -= spr_h + spacing;
+			}
+		}
+	}
+	~SpriteSheet() {
+		free(sprites);
+	}
+
+};
+
+
+struct Velocity2DComponent {
+	glm::vec2 velocity;
+	Velocity2DComponent() = default;
+	Velocity2DComponent(const Velocity2DComponent&) = default;
+	Velocity2DComponent(const glm::vec2& _vel) : velocity(_vel) {
+
+	}
+	operator const glm::vec2& () { return velocity; }
 };
 
 static glm::vec2 standardTextureUV[4] = {
@@ -80,6 +166,8 @@ static GLenum textureSlots[6] = { GL_TEXTURE0, GL_TEXTURE1, GL_TEXTURE2, GL_TEXT
 	int channels;
 	stbi_uc *image = stbi_load(tex->filepath, &w, &h, &channels, 0);
 	if (image != nullptr) {
+		tex->width = w;
+		tex->height = h;
 		//Upload image to GPU. GL_RGBA appears twice for internal and external format
 		//Check for png, then upload accordingly
 		if (s.substr(s.length() - size_t(3), 3) == "png") {
@@ -113,6 +201,8 @@ Texture initTexture(std::string s, int slot) {
 	int channels;
 	stbi_uc *image = stbi_load(tex.filepath, &w, &h, &channels, 0);
 	if (image != nullptr) {
+		tex.width = w;
+		tex.height = h;
 		//Upload image to GPU. GL_RGBA appears twice for internal and external format
 		//Check for png, then upload accordingly
 		if (s.substr(s.length() - size_t(3), 3) == "png") {
@@ -367,31 +457,44 @@ void addTextureAsset(AssetPool* pool, std::string fileName) {
 static int currentChallenge = 0;
 
 void update(double dt, entt::registry& registry) {
-	auto view = registry.view<TransformComponent>();
-	float deltaX = 0.0f;
-	float deltaY = 0.0f;
-	if (Key::isKeyHeld(GLFW_KEY_LEFT)) {
-		deltaX = -100.0f * dt;
-	}
-	if (Key::isKeyHeld(GLFW_KEY_RIGHT)) {
-		deltaX = 100.0f * dt;
-	}
-	if (Key::isKeyHeld(GLFW_KEY_UP)) {
-		deltaY = 100.0f * dt;
-	}
-	if (Key::isKeyHeld(GLFW_KEY_DOWN)) {
-		deltaY = -100.0f * dt;
-	}
-
-	
-
+	auto view = registry.view<Velocity2DComponent>();
 	for (auto entity : view) {
-		TransformComponent& transform = view.get<TransformComponent>(entity);
-	}
+		auto& vel = view.get<Velocity2DComponent>(entity);
+		bool left = Key::isKeyHeld(GLFW_KEY_LEFT);
+		bool right = Key::isKeyHeld(GLFW_KEY_RIGHT);
+		if (left) {
+			vel.velocity.x = -100.0f * dt;
+		} 
+		if (right) {
+			vel.velocity.x = 100.0f * dt;
+		} 
+		if (!left && !right) {
+			vel.velocity.x = 0.0f;
+		}
 
+		bool up = Key::isKeyHeld(GLFW_KEY_UP);
+		bool down = Key::isKeyHeld(GLFW_KEY_DOWN);
+		if (down) {
+			vel.velocity.y = -100.0f * dt;
+		}
+		if (up) {
+			vel.velocity.y = 100.0f * dt;
+		}
+		if (!up && !down) {
+			vel.velocity.y = 0.0f;
+		}
+		
+	}
 }
 
-
+void checkComponent(entt::registry& registry) {
+	auto view = registry.view<Velocity2DComponent>();
+	for (auto entity : view) {
+		auto& vel = view.get<Velocity2DComponent>(entity);
+		float x = vel.velocity.x;
+		float y = vel.velocity.y;
+	}
+}
 
 
 int main() {
@@ -431,6 +534,7 @@ int main() {
 	entt::entity entity = registry.create();
 	//Create component. Identifier + any args to be passed into the component
 	registry.emplace<TransformComponent>(entity, glm::mat4(1.0f));
+	registry.emplace<Velocity2DComponent>(entity, glm::vec2(0.0f, 0.0f));
 
 	Camera* cam = initCamera(glm::vec2(0.0f, 0.0f));
 	Scene* curScene = initScene(250.0f / 255.0f, 119.0f/255.0f, 110.0f/255.0f);
@@ -456,6 +560,7 @@ int main() {
 			currentChallenge = 2;
 		}
 		updateScene(dt, &curScene);
+		update(dt, registry);
 		if (Key::keyIsPressed[GLFW_KEY_F]) {
 			toggleFullScreen(win, true);
 		}
@@ -469,18 +574,9 @@ int main() {
 		if (Key::keyIsPressed[GLFW_KEY_ESCAPE]) {
 			glfwSetWindowShouldClose(win->window, true);
 		}
-		if (Key::isKeyHeld(GLFW_KEY_LEFT) ){
-			deltaX = -100.0f * dt;
+		if (Key::isKeyDown(GLFW_KEY_T)) {
+			checkComponent(registry);
 		}
-		if (Key::isKeyHeld(GLFW_KEY_RIGHT) ) {
-			deltaX = 100.0f * dt;
-		}
-		if (Key::isKeyHeld(GLFW_KEY_UP)) {
-			deltaY = 100.0f * dt;
-		}
-		if (Key::isKeyHeld(GLFW_KEY_DOWN)) {
-			deltaY = -100.0f * dt;
-		} 
 		if (Key::isKeyDown(GLFW_KEY_R)) {
 			destroyChallenge2();
 			numRows = numRows + 1;
@@ -502,7 +598,8 @@ int main() {
 		glUniformMatrix4fv(s->projLoc, 1, GL_FALSE, glm::value_ptr(cam->projMat));
 		glUniformMatrix4fv(s->viewLoc, 1, GL_FALSE, glm::value_ptr(cam->viewMat));
 		auto& trans = registry.get<TransformComponent>(entity);
-		trans.transform = glm::translate(trans.transform, glm::vec3(deltaX, deltaY, 0.0f));
+		auto& vel = registry.get<Velocity2DComponent>(entity);
+		trans.transform = glm::translate(trans.transform, glm::vec3(vel.velocity, 0.0f));
 		glUniformMatrix4fv(s->transLoc, 1, GL_FALSE, glm::value_ptr(trans.transform));
 
 		glUniform1iv(s->textureLoc, 2, samplers);
