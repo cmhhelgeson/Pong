@@ -238,38 +238,6 @@ std::vector<Vertex> createSquare(float start, float width, float height) {
 	};
 }
 
-//Two Quads in a single draw call
-/*std::vector<VertexUV> createSquareUV(float start, float width, float height, float tex_scale_w, float tex_scale_h) {
-	 return {
-		VertexUV{glm::vec3(start, start, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f), glm::vec2(tex_scale_w, tex_scale_h)},           
-		VertexUV{glm::vec3(start,  start + height, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f), glm::vec2(tex_scale_w, 0.0f) },
-		VertexUV{glm::vec3(start + width,  start + height, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f), glm::vec2(0.0f, 0.0f)},
-		VertexUV{glm::vec3(start + width, start, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f), glm::vec2(0.0f, tex_scale_h)}, 
-
-		VertexUV{glm::vec3(start + 400.0f, start, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f), glm::vec2(tex_scale_w, tex_scale_h)},
-		VertexUV{glm::vec3(start + 400.0f,  start + height, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f), glm::vec2(tex_scale_w, 0.0f) },
-		VertexUV{glm::vec3(start + 400.0f + width,  start + height, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f), glm::vec2(0.0f, 0.0f)},
-		VertexUV{glm::vec3(start + 400.0f + width, start, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f), glm::vec2(0.0f, tex_scale_h)}
-	}; 
-
-	return {
-		VertexUV{glm::vec3(start, start, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f), glm::vec2(tex_scale_w, tex_scale_h), 0.0f},
-		VertexUV{glm::vec3(start,  start + height, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f), glm::vec2(tex_scale_w, 0.0f), 0.0f},
-		VertexUV{glm::vec3(start + width,  start + height, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f), glm::vec2(0.0f, 0.0f), 0.0f},
-		VertexUV{glm::vec3(start + width, start, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f), glm::vec2(0.0f, tex_scale_h), 0.0f},
-
-		VertexUV{glm::vec3(start + 400.0f, start, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f), glm::vec2(tex_scale_w, tex_scale_h), 1.0f},
-		VertexUV{glm::vec3(start + 400.0f,  start + height, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f), glm::vec2(tex_scale_w, 0.0f), 1.0f},
-		VertexUV{glm::vec3(start + 400.0f + width,  start + height, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f), glm::vec2(0.0f, 0.0f), 1.0f},
-		VertexUV{glm::vec3(start + 400.0f + width, start, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f), glm::vec2(0.0f, tex_scale_h), 1.0f}, 
-
-		VertexUV{glm::vec3(start + 700.0f, start, 0.0f) , glm::vec4(0.11f, 0.8f, 0.76f, 1.0f), glm::vec2(tex_scale_w, tex_scale_h), 0.0f},
-		VertexUV{glm::vec3(start + 700.0f,  start + height, 0.0f) , glm::vec4(0.1f,  0.9f, 0.12f, 1.0f), glm::vec2(tex_scale_w, 0.0f), 0.0f},
-		VertexUV{glm::vec3(start + 700.0f + width,  start + height, 0.0f) ,  glm::vec4(0.12f, 0.9f, 0.1f,  1.0f), glm::vec2(0.0f, 0.0f), 0.0f},
-		VertexUV{glm::vec3(start + 700.0f + width, start, 0.0f) , glm::vec4(0.12f, 0.1f, 0.9f,  1.0f), glm::vec2(0.0f, tex_scale_h), 0.0f}
-	};
-} */
-
 void fillVectorWithQuads(std::vector<VertexUV>& vec, float start, float width, float height, float tex_scale_w, float tex_scale_h, int numRows, int numCols, int numTexIds) {
 	float curId = 0.0f;
 	float horizontalOffset = 0.0f;
