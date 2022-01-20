@@ -2,10 +2,11 @@
 #include "Shader.h"
 #include "Graphics.h"
 #include "Camera.h"
+#include "Texture.h"
 #include <entt/entt.hpp>
 #include <entt/core/type_traits.hpp>
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
+#include <stb_image.h> 
 #define TAU (M_PI * 2)
 
 struct Scene {
@@ -14,12 +15,12 @@ struct Scene {
 	float fadeTime = 2.0f;
 };
 
-struct Texture {
+/*struct Texture {
 	const char* filepath;
 	uint32_t id;
 	int width;
 	int height;
-};
+}; */
 
 struct TransformComponent {
 	glm::mat4 transform;
@@ -141,12 +142,9 @@ struct SpriteRendererComponent {
 		texture(_texture), texCoords(_coords) {
 		color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	}
-
-
-
 };
 
-static GLenum textureSlots[6] = { GL_TEXTURE0, GL_TEXTURE1, GL_TEXTURE2, GL_TEXTURE3, GL_TEXTURE4, GL_TEXTURE5};
+//static GLenum textureSlots[6] = { GL_TEXTURE0, GL_TEXTURE1, GL_TEXTURE2, GL_TEXTURE3, GL_TEXTURE4, GL_TEXTURE5};
 
 //Create texture pointer
 /* Texture* initTexturePointer(std::string s, int slot) {
@@ -182,7 +180,7 @@ static GLenum textureSlots[6] = { GL_TEXTURE0, GL_TEXTURE1, GL_TEXTURE2, GL_TEXT
 	}
 	stbi_image_free(image);
 	return tex;
-} */
+} 
 
 Texture initTexture(std::string s, int slot) {
 	Texture tex;
@@ -227,7 +225,7 @@ void uploadTexture(uint32_t id, const char* name, uint32_t tex_slot) {
 	uint32_t loc = glGetUniformLocation(id, name);
 	//Doesn't need to take in texture. It knows to find it at slot 0..1, etc
 	glUniform1i(loc, tex_slot);
-}
+} */
 
 
 namespace Input {
@@ -406,6 +404,7 @@ void destroyChallenge2() {
 struct AssetPool {
 	std::unordered_map<std::string, ShaderInfo> shaders;
 	std::unordered_map<std::string, Texture> textures;
+	std::unordered_map<std::string, SpriteSheet> spritesheets;
 };
 
 ShaderInfo *GetShaderFromPool(AssetPool* pool, std::string vertSrc, std::string fragSrc) {
@@ -433,6 +432,15 @@ Texture *GetTextureFromPool(AssetPool* pool, std::string fileName) {
 	}
 }
 
+SpriteSheet* GetSpriteSheetFromPool(AssetPool* pool, std::string fileName) {
+	std::unordered_map<std::string, SpriteSheet>::iterator it = pool->spritesheets.find(fileName);
+	if (pool->textures.find(fileName) != pool->textures.end()) {
+		return &(it->second);
+	} else {
+		return nullptr;
+	}
+}
+
 void addShaderAsset(AssetPool *pool, std::string vrtSrc, std::string fragSrc) {
 	ShaderInfo s;
 	s.id = compileShader(vrtSrc, fragSrc);
@@ -442,6 +450,14 @@ void addShaderAsset(AssetPool *pool, std::string vrtSrc, std::string fragSrc) {
 	s.projLoc = (glGetUniformLocation(s.id, "proj"));
 	s.textureLoc = glGetUniformLocation(s.id, "uTextures");
 	pool->shaders.insert({ vrtSrc, s });
+}
+
+void addSpriteSheet(AssetPool* pool, int w, int h, int numSprites, int spacing, std::string src) {
+	Texture* tex = GetTextureFromPool(pool, src);
+	SpriteSheet ss = SpriteSheet(tex, w, h, numSprites, spacing);
+	
+	
+	pool->spritesheets.insert({ src, ss });
 }
 
 void deleteShaderAssets(AssetPool* pool) {
