@@ -72,22 +72,22 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\entt\src;C:\stb\;C:\glm;C:\glad\include;C:\glfw-3.3.6\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\entt\src;C:\stb\;C:\glm;C:\glad\include;C:\glfw-3.3.6\include;C:\jsoncpp\dist;$(IncludePath)</IncludePath>
     <LibraryPath>C:\glfw-3.3.6\build\src\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\entt\src;C:\stb\;C:\glm;C:\glad\include;C:\glfw-3.3.6\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\entt\src;C:\stb\;C:\glm;C:\glad\include;C:\glfw-3.3.6\include;C:\jsoncpp\dist;$(IncludePath)</IncludePath>
     <LibraryPath>C:\glfw-3.3.6\build\src\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\entt\src;C:\stb\;C:\glm;C:\glad\include;C:\glfw-3.3.6\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\entt\src;C:\stb\;C:\glm;C:\glad\include;C:\glfw-3.3.6\include;C:\jsoncpp\dist;$(IncludePath)</IncludePath>
     <LibraryPath>C:\glfw-3.3.6\build\src\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\entt\src;C:\stb\;C:\glm;C:\glad\include;C:\glfw-3.3.6\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\entt\src;C:\stb\;C:\glm;C:\glad\include;C:\glfw-3.3.6\include;C:\jsoncpp\dist;$(IncludePath)</IncludePath>
     <LibraryPath>C:\glfw-3.3.6\build\src\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -156,11 +156,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\..\..\..\..\..\glad\src\glad.c" />
+    <ClCompile Include="..\..\..\..\..\..\..\..\jsoncpp\dist\jsoncpp.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="ChallengeDraw.cpp" />
     <ClCompile Include="Graphics.cpp" />
     <ClCompile Include="Helper.cpp" />
     <ClCompile Include="Input.cpp" />
+    <ClCompile Include="Keyboard.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="Texture.cpp" />
@@ -172,6 +174,7 @@
     <ClInclude Include="core.h" />
     <ClInclude Include="Graphics.h" />
     <ClInclude Include="Helper.h" />
+    <ClInclude Include="Keyboard.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="Window.h" />

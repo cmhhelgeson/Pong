@@ -90,3 +90,56 @@ void destroyGlContext(glContext* context) {
 	glDeleteVertexArrays(1, &(context->vao));
 }
 
+
+Sprite::Sprite(Texture * _texture) : texture(_texture) {
+	texCoords[0] = { 1.0f, 1.0f };
+	texCoords[1] = { 1.0f, 0.0f };
+	texCoords[2] = { 0.0f, 0.0f };
+	texCoords[3] = { 0.0f, 1.0f };
+}
+
+Sprite::Sprite(Texture* _texture, glm::vec2 _coords) {
+	texture = _texture;
+	texCoords[0] = { _coords.x, _coords.y };
+	texCoords[1] = { _coords.x, 0.0f };
+	texCoords[2] = { 0.0f, 0.0f };
+	texCoords[3] = { 0.0f, _coords.y };
+}
+Sprite::Sprite(Texture* _texture, glm::vec2* _texCoords)
+{
+	texture = _texture;
+	for (int i = 0; i < 4; i++) {
+		texCoords[0] = (*_texCoords);
+		_texCoords++;
+	}
+}
+
+SpriteSheet::SpriteSheet(Texture* _texture, int spr_w, int spr_h, int numSprites, int spacing) {
+	texture = _texture;
+	//sprites = (Sprite*)malloc(numSprites * sizeof(Sprite));
+	int currentX = 0;
+	int currentY = texture->height - spr_h;
+	nSprites = numSprites;
+	for (int i = 0; i < numSprites; i++) {
+		//Get the normalized  coordinates of the sprite within the texture
+		float nLeft = currentX / float(texture->width);
+		float nRight = (currentX + spr_w) / float(texture->width);
+		float nBottom = currentY / float(texture->height);
+		float nTop = (currentY + spr_h) / float(texture->height);
+		glm::vec2 coords[4] = {
+			{nRight, nTop},
+			{nRight, nBottom},
+			{nLeft, nBottom},
+			{nLeft, nTop}
+		};
+		sprites.push_back(Sprite(texture, coords));
+		currentX += spr_w + spacing;
+		if (currentX >= texture->width) {
+			currentX = 0.0f;
+			currentY -= spr_h + spacing;
+		}
+	}
+}
+SpriteSheet::~SpriteSheet() {
+	
+}

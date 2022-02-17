@@ -1,0 +1,10 @@
+{
+  "type": "levelscene",
+  "assetPath": "../assets", 
+  "fadeTime": 2.0,
+  "color": {
+    "r": 255, 
+    "g": 119, 
+    "b": 110
+  }
+}

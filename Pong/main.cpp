@@ -2,18 +2,38 @@
 #include "Shader.h"
 #include "Graphics.h"
 #include "Camera.h"
-#include "Texture.h"
+#include "Keyboard.h"
 #include <entt/entt.hpp>
 #include <entt/core/type_traits.hpp>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h> 
+#include "C:/jsoncpp/dist/json/json.h"
 #define TAU (M_PI * 2)
+
+
 
 struct Scene {
 	glm::vec3 backColor;
+	std::string sceneType;
+	std::string assetPath;
 	bool changingScene = false;
 	float fadeTime = 2.0f;
+	void update();
 };
+
+Scene* initScene(int newScene) {
+	Scene* scene = new Scene();
+	std::string filename = "scene_files/scene" + std::to_string(newScene) + ".json";
+	std::ifstream scene_file(filename);
+	Json::Value root;
+	scene_file >> root;
+	scene->backColor = 
+		glm::vec3(root["color"]["r"].asFloat() / 255.0f, root["color"]["g"].asFloat() / 255.0f, root["color"]["b"].asFloat() / 255.0f);
+	scene->sceneType = root["type"].asString();
+	scene->assetPath = root["assetPath"].asString();
+	scene->fadeTime = root["fadeTime"].asFloat();
+	return scene;
+}
 
 struct TransformComponent {
 	glm::mat4 transform;
@@ -34,70 +54,6 @@ struct RenderBatch {
 	const int vertex_size_bytes = vertex_size * sizeof(float);
 
 };
-
-struct Sprite {
-	Texture* texture;
-	glm::vec2 texCoords[4];
-	Sprite() = default;
-	Sprite(Texture* _texture) {
-		texture = _texture;
-		texCoords[0] = { 1.0f, 1.0f };
-		texCoords[1] = { 1.0f, 0.0f };
-		texCoords[2] = { 0.0f, 0.0f };
-		texCoords[3] = { 0.0f, 1.0f };
-	}
-
-	Sprite(Texture* _texture, glm::vec2 _coords) {
-		texture = _texture;
-		texCoords[0] = { _coords.x, _coords.y };
-		texCoords[1] = { _coords.x, 0.0f };
-		texCoords[2] = { 0.0f, 0.0f };
-		texCoords[3] = { 0.0f, _coords.y };
-	}
-	Sprite(Texture* _texture, glm::vec2 *texCoords) {
-		texture = _texture;
-		for (int i = 0; i < 4; i++) {
-			texCoords[0] = (*texCoords);
-			texCoords++;
-		}
-	}
-};
-
-struct SpriteSheet {
-	Texture* texture;
-	Sprite* sprites;
-	SpriteSheet() = default;
-	SpriteSheet(Texture* tex, int spr_w, int spr_h, int numSprites, int spacing) {
-		sprites = (Sprite*)malloc(numSprites * sizeof(Sprite));
-		int currentX = 0;
-		int currentY = texture->height - spr_h;
-		for (int i = 0; i < numSprites; i++) {
-			//Get the normalized  coordinates of the sprite within the texture
-			float nLeft = currentX / float(texture->width);
-			float nRight = (currentX + spr_w) / float(texture->width);
-			float nBottom = currentY / float(texture->height);
-			float nTop = (currentY + spr_h) / float(texture->height);
-			glm::vec2 coords[4] = {
-				{nRight, nTop},
-				{nRight, nBottom},
-				{nLeft, nBottom},
-				{nLeft, nTop}
-			};
-			sprites = new Sprite(texture, coords);
-			sprites++;
-			currentX += spr_w + spacing;
-			if (currentX >= texture->width) {
-				currentX = 0.0f;
-				currentY -= spr_h + spacing;
-			}
-		}
-	}
-	~SpriteSheet() {
-		free(sprites);
-	}
-
-};
-
 
 struct Velocity2DComponent {
 	glm::vec2 velocity;
@@ -137,56 +93,25 @@ struct SpriteRendererComponent {
 	}
 };
 
-namespace Input {
-	namespace Key {
-		bool keyIsPressed[GLFW_KEY_LAST];
-		bool keyIsHeld[GLFW_KEY_LAST];
-		std::array<bool, GLFW_KEY_LAST> keyCurState = { 0 };
-		std::array<bool, GLFW_KEY_LAST> keyPrevState = { 0 };
-		bool isKeyDown(int key) {
-			if (key >= 0 && key < GLFW_KEY_LAST) {
-				bool k = keyIsPressed[key];
-				keyIsPressed[key] = false;
-				return k;
-			}
-		}
-		bool isKeyHeld(int key) {
-			if (key >= 0 && key < GLFW_KEY_LAST) {
-				return (keyCurState[key] == keyPrevState[key] && keyCurState[key] == GLFW_PRESS);
-			}
-		}
-		
-		bool singlePress(int key) {
-			if (key >= 0 && key < GLFW_KEY_LAST) {
-				return (keyIsPressed[key] && !keyIsHeld[key]);
-			}
-
-		}
-
-
-	}
-	namespace Mouse {
-		bool mouseIsPressed[GLFW_MOUSE_BUTTON_LAST];
-	}
-};
-
 using namespace Input;
+Key keyboard;
+Mouse mouse;
 
 
 void cmh_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (key >= 0 && key < GLFW_KEY_LAST) {
 		//Key::keyIsHeld[key] = (Key::keyIsPressed[key] && action == GLFW_PRESS);
-		Key::keyIsPressed[key] = action == GLFW_PRESS;
-		std::cout << "Prev State: " << Key::keyPrevState[key] << " Current State: " << Key::keyCurState[key] << '\n'; 
+		keyboard.keyIsPressed[key] = action == GLFW_PRESS;
+		std::cout << "Prev State: " << keyboard.keyPrevState[key] << " Current State: " << keyboard.keyCurState[key] << '\n'; 
 		if (action != GLFW_REPEAT) {
-			Key::keyCurState[key] = action;
+			keyboard.keyCurState[key] = action;
 		} 
 	}
 }
 
 void cmh_mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
 	if (button >= 0 && button < GLFW_MOUSE_BUTTON_LAST) {
-		Mouse::mouseIsPressed[button] = action == GLFW_PRESS;
+		mouse.mouseIsPressed[button] = action == GLFW_PRESS;
 	}
 }
 
@@ -194,21 +119,20 @@ void cmh_resize_callback(GLFWwindow* window, int width, int height) {
 	glViewport(0, 0, width, height);
 }
 
-
-Scene* initScene(float r, float g, float b) {
-	Scene* s = new Scene();
-	s->backColor = glm::vec3(r, g, b);
-	return s;
+void setCallbacks(Window* win) {
+	glfwSetKeyCallback(win->window, cmh_key_callback);
+	glfwSetMouseButtonCallback(win->window, cmh_mouse_button_callback);
+	glfwSetFramebufferSizeCallback(win->window, cmh_resize_callback);
 }
 
 
 Scene* changeScene(Scene* cur_scene) {
 	free(cur_scene);
-	return initScene(42.0f / 255.0f, 252.0f / 255.0f, 3.0f / 255.0f);
+	return initScene(2);
 }
 
 void updateScene(double dt, Scene** cur_scene) {
-	if (!(*cur_scene)->changingScene && Key::keyIsPressed[GLFW_KEY_P]) {
+	if (!(*cur_scene)->changingScene && keyboard.keyIsPressed[GLFW_KEY_P]) {
 		(*cur_scene)->changingScene = true;
 		printf("Changing scene\n");
 	}
@@ -254,8 +178,34 @@ void fillVectorWithQuads(std::vector<VertexUV>& vec, float start, float width, f
 		horizontalOffset = 0.0f;
 		verticalOffset += height;
 	}
-	
+}
 
+void createSpriteSheetQuads(std::vector<VertexUV>& vec, float start, float width, float height, SpriteSheet* ss) {
+	float verticalOffset = 0.0f;
+	float horizontalOffset = 0.0f;
+	for (int i = 0; i < ss->nSprites; i++) {
+		vec.push_back(VertexUV{ 
+			glm::vec3(start + horizontalOffset, start + verticalOffset, 0.0f) ,
+			glm::vec4(0.11f, 0.8f, 0.76f, 1.0f),
+			glm::vec2(ss->sprites[i].texCoords[0].x, ss->sprites[i].texCoords[0].y), 
+			0.0f });
+		vec.push_back(VertexUV{
+			glm::vec3(start + horizontalOffset,  start + height + verticalOffset, 0.0f) ,
+			glm::vec4(0.1f,  0.9f, 0.12f, 1.0f),
+			glm::vec2(ss->sprites[i].texCoords[1].x, ss->sprites[i].texCoords[1].y),
+			0.0f });
+		vec.push_back(VertexUV{ 
+			glm::vec3(start + width + horizontalOffset,  start + height + verticalOffset, 0.0f) ,  
+			glm::vec4(0.12f, 0.9f, 0.1f,  1.0f), 
+			glm::vec2(ss->sprites[i].texCoords[2].x, ss->sprites[i].texCoords[2].y),
+			0.0f });
+		vec.push_back(VertexUV{ 
+			glm::vec3(start + width + horizontalOffset, start + verticalOffset, 0.0f) , 
+			glm::vec4(0.12f, 0.1f, 0.9f,  1.0f), 
+			glm::vec2(ss->sprites[i].texCoords[3].x, ss->sprites[i].texCoords[3].y),
+			0.0f });
+		horizontalOffset += width;
+	}
 }
 
 
@@ -295,7 +245,7 @@ void setupChallenge2(int numRows, int numCols) {
 	fillVectorWithQuads(vec, 0.0f, 100.0f, 100.0f, 1.0f, 1.0f, numRows, numCols, 2);
 	setupShapeUV(&Square.vao, &Square.vbo, &Square.ebo, &vec);
 	uint32_t* challenge2Elements = generateQuadIndices(numRows * numCols);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, (numRows * numCols * 6 * sizeof(uint32_t)), challenge2Elements, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, ((uint64_t)numRows * (uint64_t)numCols * 6 * sizeof(uint32_t)), challenge2Elements, GL_STATIC_DRAW);
 	free(challenge2Elements);
 } 
 
@@ -306,6 +256,24 @@ void drawChallenge2(int numRows, int numCols) {
 }
 
 void destroyChallenge2() {
+	destroyGlContext(&Square);
+}
+
+void setupSpriteSheetChallenge(SpriteSheet* ss) {
+	std::vector<VertexUV> vec;
+	createSpriteSheetQuads(vec, 50.0f, 96.0f, 96.0f, ss);
+	setupShapeUV(&Square.vao, &Square.vbo, &Square.ebo, &vec);
+	uint32_t* elements = generateQuadIndices(ss->nSprites);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, ((uint64_t)ss->nSprites * 6 * sizeof(uint32_t)), elements, GL_STATIC_DRAW);
+	free(elements);
+}
+
+void drawSpriteSheetChallenge(SpriteSheet *ss) {
+	glBindVertexArray(Square.vao);
+	glDrawElements(GL_TRIANGLES, ss->nSprites, GL_UNSIGNED_INT, 0);
+}
+
+void destroySpriteSheetChallenge() {
 	destroyGlContext(&Square);
 }
 
@@ -364,8 +332,6 @@ void addShaderAsset(AssetPool *pool, std::string vrtSrc, std::string fragSrc) {
 void addSpriteSheet(AssetPool* pool, int w, int h, int numSprites, int spacing, std::string src) {
 	Texture* tex = GetTextureFromPool(pool, src);
 	SpriteSheet ss = SpriteSheet(tex, w, h, numSprites, spacing);
-	
-	
 	pool->spritesheets.insert({ src, ss });
 }
 
@@ -375,18 +341,19 @@ void deleteShaderAssets(AssetPool* pool) {
 	}
 }
 
+
 void addTextureAsset(AssetPool* pool, std::string fileName) {
 	return;
 }
 
 static int currentChallenge = 0;
 
-void update(double dt, entt::registry& registry) {
+void update(double dt, entt::registry& registry, Key *keyboard) {
 	auto view = registry.view<Velocity2DComponent>();
 	for (auto entity : view) {
 		auto& vel = view.get<Velocity2DComponent>(entity);
-		bool left = Key::isKeyHeld(GLFW_KEY_LEFT);
-		bool right = Key::isKeyHeld(GLFW_KEY_RIGHT);
+		bool left = keyboard->isKeyHeld(GLFW_KEY_LEFT);//bool left = Key::isKeyHeld(GLFW_KEY_LEFT);
+		bool right = keyboard->isKeyHeld(GLFW_KEY_RIGHT);
 		if (left) {
 			vel.velocity.x = -100.0f * dt;
 		} 
@@ -397,8 +364,8 @@ void update(double dt, entt::registry& registry) {
 			vel.velocity.x = 0.0f;
 		}
 
-		bool up = Key::isKeyHeld(GLFW_KEY_UP);
-		bool down = Key::isKeyHeld(GLFW_KEY_DOWN);
+		bool up = keyboard->isKeyHeld(GLFW_KEY_UP);
+		bool down = keyboard->isKeyHeld(GLFW_KEY_DOWN);
 		if (down) {
 			vel.velocity.y = -100.0f * dt;
 		}
@@ -422,35 +389,35 @@ void checkComponent(entt::registry& registry) {
 }
 
 
+
+
 int main() {
+	/* Basic Setup */
 	if (!glfwInit()) {
 		printf("Failed to initialize GLFW");
 		return -1;
 	}
-
-	double timeStarted = glfwGetTime();
-
 	Window* win = initializeWindow(1280, 720, "Pong");
 	if (win == nullptr) {
 		return -1;
 	}
-
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
 		printf("Failed to initialize GLAD\n");
 		glfwTerminate();
 		return -1;
 	}
 
-	glfwSetKeyCallback(win->window, cmh_key_callback);
-	glfwSetMouseButtonCallback(win->window, cmh_mouse_button_callback);
-	glfwSetFramebufferSizeCallback(win->window, cmh_resize_callback);
+	setCallbacks(win);
+
 
 	AssetPool assets;
 	addShaderAsset(&assets, "default_uv_vert.glsl", "default_uv_frag.glsl");
 	
 	glViewport(0, 0, win->sizeX, win->sizeY);
-	Texture tex1 = initTexture(std::string("assets/TestImage2.png"), 0);
-	Texture tex2 = initTexture(std::string("assets/wall.jpg"), 1);
+	//Texture tex1 = initTexture(std::string("assets/TestImage2.png"), 0);
+	//Texture tex2 = initTexture(std::string("assets/wall.jpg"), 1);
+	Texture characterSheet = initTexture(std::string("assets/spritesheet.png"), 0);
+	SpriteSheet ss = SpriteSheet(&characterSheet, 16, 16, 26, 0);
 	int samplers[2] = { 0, 1 };
 
 	//entt practice
@@ -462,7 +429,7 @@ int main() {
 	registry.emplace<Velocity2DComponent>(entity, glm::vec2(0.0f, 0.0f));
 
 	Camera* cam = initCamera(glm::vec2(0.0f, 0.0f));
-	Scene* curScene = initScene(250.0f / 255.0f, 119.0f/255.0f, 110.0f/255.0f);
+	Scene* curScene = initScene(1);
 	static double fps = 1.0 / 60.0;
 	double beginFrameTime = glfwGetTime(), beginSecondTime = glfwGetTime();
 	double endFrameTime = glfwGetTime(), endSecondTime = glfwGetTime();
@@ -478,39 +445,32 @@ int main() {
 	
 	int frameCount = 0;
 	while (!glfwWindowShouldClose(win->window)) {
-		Key::keyPrevState = Key::keyCurState;
+		//(*curScene).update(dt);
+		keyboard.keyPrevState = keyboard.keyCurState;
 		//Setup Draw
 		if (currentChallenge == 0) {
-			setupChallenge2(numRows, numCols);
+			setupSpriteSheetChallenge(&ss);
 			currentChallenge = 2;
+			/* setupChallenge2(numRows, numCols);
+			currentChallenge = 2; */
 		}
 		updateScene(dt, &curScene);
-		update(dt, registry);
-		if (Key::keyIsPressed[GLFW_KEY_F]) {
+		update(dt, registry, &keyboard);
+		if (keyboard.keyIsPressed[GLFW_KEY_F]) {
 			toggleFullScreen(win, true);
 		}
-		if (Key::keyIsPressed[GLFW_KEY_P]) {
+		if (keyboard.keyIsPressed[GLFW_KEY_P]) {
 			updateScene(dt, &curScene);
 			printf("Changed Scene\n");
 		}
-		if (Key::keyIsPressed[GLFW_KEY_M]) {
+		if (keyboard.keyIsPressed[GLFW_KEY_M]) {
 			toggleFullScreen(win, false);
 		}
-		if (Key::keyIsPressed[GLFW_KEY_ESCAPE]) {
+		if (keyboard.keyIsPressed[GLFW_KEY_ESCAPE]) {
 			glfwSetWindowShouldClose(win->window, true);
 		}
-		if (Key::isKeyDown(GLFW_KEY_T)) {
+		if (keyboard.isKeyDown(GLFW_KEY_T)) {
 			checkComponent(registry);
-		}
-		if (Key::isKeyDown(GLFW_KEY_R)) {
-			destroyChallenge2();
-			numRows = numRows + 1;
-			setupChallenge2(numRows, numCols);
-		}
-		if (Key::isKeyDown(GLFW_KEY_C)) {
-			destroyChallenge2();
-			numCols = numCols + 1;
-			setupChallenge2(numRows, numCols);
 		}
 		glClearColor(curScene->backColor.r, curScene->backColor.g, curScene->backColor.b, 1.0f);
 		//Clear Screen for next draw
@@ -530,7 +490,8 @@ int main() {
 		glUniform1iv(s->textureLoc, 2, samplers);
 		deltaY = 0.0f;
 		deltaX = 0.0f;
-		drawChallenge2(numRows, numCols);
+		//drawChallenge2(numRows, numCols);
+		drawSpriteSheetChallenge(&ss);
 
 		//Double Buffering
 		glfwSwapBuffers(win->window);
@@ -549,10 +510,6 @@ int main() {
 
 	destroyChallenge2();
 	deleteShaderAssets(&assets);
-	//deleteShader(s2.id);
-	unbindTexture(&tex1);
-	//unbindTexture(tex2);
-	//free(&tex1);
 	free(curScene);
 	free(cam);
 
